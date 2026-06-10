@@ -4,7 +4,7 @@ Planejador financeiro completo em uma página (HTML + Chart.js), com:
 
 - 9 abas: dados, carteira, projeção, aposentadoria, metas, orçamento, proteção, educação e dívidas
 - Importação da declaração de IRPF (arquivo `.DEC`, layout 2026)
-- **Tela de login** com validação por e-mail e senha (criar conta / entrar / modo local)
+- **Tela de login** obrigatória com validação por e-mail e senha (criar conta / entrar)
 - Salvamento local (localStorage) e **na nuvem** (PostgreSQL via Railway)
 
 ## Estrutura
@@ -56,11 +56,10 @@ Sem `DATABASE_URL`, o servidor funciona normalmente, mas os botões de nuvem ret
 
 ## Login e nuvem
 
-Ao abrir o app aparece a **tela de login**:
+Ao abrir o app aparece a **tela de login** (obrigatória):
 
 - **Criar conta**: nome, e-mail e senha (mínimo 6 caracteres; armazenada como hash scrypt). O estado atual do planejador é salvo na conta nova.
 - **Entrar**: valida e-mail/senha e carrega tudo do banco: campos, carteira, imóveis, dívidas, orçamento, metas, proteção e educação.
-- **Continuar sem conta**: modo local, dados ficam só no navegador.
 
 Logado, o botão **💾 Salvar** grava no navegador **e** no banco. A sessão dura 90 dias (auto-login ao reabrir); **Sair** encerra a sessão.
 

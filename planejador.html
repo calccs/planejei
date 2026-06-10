@@ -177,9 +177,6 @@
       <span id="login-alternar-txt">Ainda não tem conta?</span>
       <a id="login-alternar" onclick="alternarModoLogin()" style="color:var(--accent);cursor:pointer;font-weight:600">Criar conta</a>
     </div>
-    <div style="text-align:center;margin-top:10px">
-      <a onclick="entrarModoLocal()" style="font-size:10px;color:var(--text2);cursor:pointer;text-decoration:underline">Continuar sem conta (dados ficam só neste navegador)</a>
-    </div>
   </div>
 </div>
 
@@ -1652,12 +1649,6 @@ function fecharLogin(){
   else { info.style.display='none'; sair.style.display='none'; }
 }
 
-function entrarModoLocal(){
-  sessaoToken=''; sessaoEmail='';
-  fecharLogin();
-  toast('Modo local: dados salvos só neste navegador.');
-}
-
 async function sairConta(){
   try{ if(sessaoToken) await apiJSON('/api/logout',{token:sessaoToken}); }catch(e){}
   localStorage.removeItem('planejei_token');
@@ -1667,12 +1658,8 @@ async function sairConta(){
 
 // Auto-login ao abrir: valida o token salvo e carrega os dados da conta
 async function initLogin(){
-  if(location.protocol==='file:'){      // sem servidor → só modo local
-    document.querySelectorAll('#login-screen a, #login-screen button, #login-screen input').forEach(el=>{
-      if(!el.getAttribute('onclick')?.includes('entrarModoLocal')) el.style.display='none';
-    });
-    document.getElementById('login-erro').textContent='Servidor indisponível (arquivo local). Use o modo local abaixo.';
-    document.getElementById('login-erro').style.display='block';
+  if(location.protocol==='file:'){      // sem servidor não há como autenticar
+    loginErro('⚠️ Abra o app pelo endereço do servidor (Railway ou http://localhost:3000) para entrar.');
     return;
   }
   if(!sessaoToken) return;              // mostra a tela de login
