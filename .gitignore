@@ -1,0 +1,18 @@
+# ── PROTEÇÃO DE DADOS PESSOAIS ──────────────────────────────
+# Ignora TUDO por padrão; só entra no repo o que for liberado abaixo.
+*
+
+# Liberados (whitelist)
+!.gitignore
+!planejador.html
+!README.md
+!api/
+!api/**
+
+# Nunca versionar, mesmo dentro de pastas liberadas:
+*.DEC
+*.dec
+declaracao*.pdf
+*.env
+.env*
+node_modules/

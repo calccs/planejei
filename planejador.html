@@ -1,0 +1,1587 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superei — Planejador Financeiro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+  :root{
+    --bg:#0f0f1a;--surface:#1a1a2e;--surface2:#20203a;--border:#2a2a4a;
+    --accent:#6c63ff;--green:#43e97b;--red:#ef4444;--gold:#f7971e;--blue:#3b82f6;
+    --text:#e8e8f0;--text2:#9090b0;--r:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  input,select,textarea{font-family:inherit;}
+
+  /* HEADER */
+  .header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+  .logo{font-size:21px;font-weight:900;background:linear-gradient(90deg,#6c63ff,#43e97b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .badge-h{font-size:11px;background:rgba(108,99,255,.2);border:1px solid var(--accent);color:var(--accent);padding:3px 10px;border-radius:99px;font-weight:700;}
+  .btn-print{background:linear-gradient(90deg,var(--accent),#8b5cf6);border:none;border-radius:10px;padding:8px 16px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;}
+
+  /* LAYOUT */
+  .main{max-width:1120px;margin:0 auto;padding:24px 18px 60px;}
+  .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:18px;}
+  .section-title{font-size:14px;font-weight:800;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .section-title::before{content:'';display:inline-block;width:4px;height:15px;background:var(--accent);border-radius:99px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}
+  @media(max-width:720px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}}
+
+  /* FORM */
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;font-weight:600;}
+  .field input,.field select{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;color:var(--text);font-size:13px;outline:none;transition:border-color .2s;width:100%;}
+  .field input:focus,.field select:focus{border-color:var(--accent);}
+  .field select option{background:var(--surface2);}
+  .field-hint{font-size:10px;color:var(--text2);margin-top:2px;}
+
+  /* TABLE */
+  .tbl{width:100%;border-collapse:collapse;font-size:12px;}
+  .tbl th{background:var(--surface2);color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+  .tbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
+  .tbl tr:hover td{background:rgba(108,99,255,.04);}
+  .tbl input{background:transparent;border:none;color:var(--text);font-size:12px;width:100%;outline:none;font-family:inherit;}
+  .tbl input:focus{background:rgba(108,99,255,.1);border-radius:4px;padding:2px 4px;}
+  .tbl select{background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;}
+
+  /* CARDS */
+  .kpi-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+  .kpi{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;flex:1;min-width:120px;}
+  .kpi-val{font-size:18px;font-weight:900;color:var(--accent);}
+  .kpi-val.green{color:var(--green);}.kpi-val.red{color:var(--red);}.kpi-val.gold{color:var(--gold);}.kpi-val.blue{color:var(--blue);}
+  .kpi-label{font-size:11px;color:var(--text2);margin-top:3px;}
+  .kpi-sub{font-size:10px;color:var(--text2);margin-top:2px;}
+
+  /* CHART */
+  .chart-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:16px;}
+  .chart-title{font-size:12px;font-weight:700;margin-bottom:12px;color:var(--text);}
+  canvas{max-height:300px;}
+
+  /* SCENARIOS */
+  .scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}
+  @media(max-width:720px){.scenarios{grid-template-columns:1fr;}}
+  .scenario-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .scenario-card.active{border-color:var(--accent);background:rgba(108,99,255,.08);}
+  .scenario-title{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;}
+  .scenario-row{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:5px;}
+  .scenario-row span{color:var(--text);font-weight:600;}
+
+  /* PROGRESS */
+  .prog-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+  .prog-label{font-size:11px;color:var(--text2);width:140px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .prog-bar{flex:1;height:7px;background:var(--border);border-radius:99px;overflow:hidden;}
+  .prog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),#8b5cf6);}
+  .prog-val{font-size:11px;font-weight:700;width:90px;text-align:right;flex-shrink:0;}
+
+  /* ALERTS */
+  .alert-ok{background:rgba(67,233,123,.08);border:1px solid rgba(67,233,123,.3);border-radius:10px;padding:14px;margin-top:10px;font-size:12px;}
+  .alert-warn{background:rgba(247,151,30,.08);border:1px solid rgba(247,151,30,.3);border-radius:10px;padding:14px;margin-top:10px;font-size:12px;}
+  .alert-err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:14px;margin-top:10px;font-size:12px;}
+
+  /* ADD/DEL */
+  .btn-add{background:none;border:1px dashed var(--border);border-radius:8px;padding:7px 12px;color:var(--text2);font-size:11px;cursor:pointer;margin-top:7px;transition:all .2s;font-family:inherit;}
+  .btn-add:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-del{background:none;border:none;color:var(--red);font-size:13px;cursor:pointer;padding:0 3px;opacity:.55;}
+  .btn-del:hover{opacity:1;}
+  .btn-sm{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;}
+  .btn-sm:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-sm.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  /* TABS */
+  .tabs{display:flex;gap:5px;margin-bottom:18px;flex-wrap:wrap;}
+  .tab{padding:7px 14px;border-radius:99px;border:1px solid var(--border);background:none;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  /* SWITCH */
+  .toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .toggle-label{font-size:11px;color:var(--text2);}
+  .switch{position:relative;display:inline-block;width:36px;height:20px;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:99px;transition:.3s;}
+  .slider:before{position:absolute;content:"";height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;}
+  input:checked+.slider{background:var(--accent);}
+  input:checked+.slider:before{transform:translateX(16px);}
+
+  /* COLLAPSIBLE */
+  .collapsible-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 0;border-bottom:1px solid var(--border);user-select:none;}
+  .collapsible-header h4{font-size:12px;font-weight:700;color:var(--text2);}
+  .collapsible-arrow{color:var(--text2);font-size:12px;transition:transform .2s;}
+  .collapsible-arrow.open{transform:rotate(180deg);}
+  .collapsible-body{overflow:hidden;max-height:0;transition:max-height .35s ease;}
+  .collapsible-body.open{max-height:2000px;}
+
+  /* RATE BRACKETS */
+  .rate-bracket{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px;}
+  .rate-cell{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;}
+  .rate-cell label{font-size:9px;color:var(--text2);display:block;margin-bottom:4px;text-transform:uppercase;line-height:1.3;}
+  .rate-cell input{background:transparent;border:none;color:var(--accent);font-size:14px;font-weight:800;width:100%;text-align:center;outline:none;font-family:inherit;}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--green);color:#0f1a0f;padding:9px 20px;border-radius:99px;font-size:12px;font-weight:700;z-index:300;transition:transform .3s,opacity .3s;opacity:0;white-space:nowrap;}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+  .divider{height:1px;background:var(--border);margin:16px 0;}
+
+  @media print{
+    .header .btn-print,.tabs,.btn-add,.btn-del,.btn-sm,.toggle-row,.collapsible-arrow{display:none;}
+    body{background:#fff;color:#000;}
+    .section{border:1px solid #ccc;background:#fff;}
+    .kpi,.chart-wrap,.scenario-card,.rate-cell{background:#f5f5f5;border:1px solid #ddd;}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo">superei</div>
+    <div class="badge-h">Planejador Financeiro</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="btn-sm" onclick="salvarDados()">💾 Salvar</button>
+    <button class="btn-print" onclick="window.print()">🖨️ PDF</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('dados')">👤 Dados</button>
+    <button class="tab" onclick="showTab('carteira')">💼 Carteira</button>
+    <button class="tab" onclick="showTab('projecao')">📈 Projeção</button>
+    <button class="tab" onclick="showTab('aposentadoria')">🏖️ Aposentadoria</button>
+    <button class="tab" onclick="showTab('metas')">🎯 Metas</button>
+    <button class="tab" onclick="showTab('orcamento')">📋 Orçamento</button>
+    <button class="tab" onclick="showTab('protecao')">🛡️ Proteção</button>
+    <button class="tab" onclick="showTab('educacao')">🎓 Educação</button>
+    <button class="tab" onclick="showTab('dividas')">💳 Dívidas</button>
+  </div>
+
+  <!-- ═══════════════════════ DADOS ═══════════════════════════ -->
+  <div id="tab-dados">
+    <div class="kpi-row" id="kpi-main"></div>
+
+    <div class="section">
+      <div class="section-title">Dados Pessoais</div>
+      <div class="grid3">
+        <div class="field"><label>Nome</label><input id="nome" value="" oninput="recalcAll()"></div>
+        <div class="field"><label>Idade atual</label><input id="idade" type="text" inputmode="decimal" value="0" oninput="recalcAll()"></div>
+        <div class="field"><label>Expectativa de vida</label><input id="vida" type="text" inputmode="decimal" value="0" oninput="recalcAll()"></div>
+        <div class="field"><label>Estado civil</label>
+          <select id="civil"><option>Solteiro</option><option selected>Casado</option><option>Divorciado</option><option>União Estável</option><option>Viúvo(a)</option></select>
+        </div>
+        <div class="field"><label>Profissão</label><input id="profissao" value=""></div>
+        <div class="field"><label>Suitability</label>
+          <select id="suitability" onchange="recalcAll()">
+            <option>Conservador (5%)</option><option selected>Moderado (15%)</option>
+            <option>Moderado-Agressivo (25%)</option><option>Agressivo (40%)</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:14px;font-size:12px;font-weight:700;margin-bottom:10px;">Dependentes</div>
+      <table class="tbl">
+        <thead><tr><th>Nome</th><th>Idade</th><th>Observações</th><th></th></tr></thead>
+        <tbody id="dep-tbody"></tbody>
+      </table>
+      <button class="btn-add" onclick="addDep()">+ Dependente</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Premissas Macroeconômicas</div>
+      <div class="grid4">
+        <div class="field"><label>Inflação anual (%)</label><input id="inflacao" type="text" inputmode="decimal" step="0.1" value="5,50" oninput="recalcAll()"></div>
+        <div class="field"><label>CDI anual (%)</label><input id="cdi" type="text" inputmode="decimal" step="0.1" value="14,40" oninput="recalcAll()"></div>
+        <div class="field"><label>Rent. pós-aposentadoria (%)</label><input id="rent_apo" type="text" inputmode="decimal" step="0.1" value="11,00" oninput="recalcAll()"></div>
+        <div class="field"><label>Objetivo</label>
+          <select id="objetivo"><option selected>Acumular Recursos</option><option>Preservar capital</option><option>Especular</option><option>Proteção e Sucessão</option></select>
+        </div>
+        <div class="field"><label>Despesa familiar/mês (R$)</label><input id="desp_mensal" type="text" inputmode="decimal" value="0" oninput="recalcAll()"></div>
+        <div class="field"><label>Poupança/mês (R$)</label><input id="poupanca" type="text" inputmode="decimal" value="0" oninput="recalcAll()"></div>
+        <div class="field"><label>Aumento anual de poupança mensal (%)</label><input id="reajuste_poupanca" type="text" inputmode="decimal" step="0.5" value="0" oninput="recalcAll()"></div>
+        <div class="field"><label>Reajuste anual das despesas (%)</label><input id="reajuste_desp" type="text" inputmode="decimal" step="0.5" value="0" oninput="recalcAll()"><div class="field-hint">Geralmente = inflação</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Balanço Patrimonial</div>
+      <div id="balanco-content"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Indicadores de Saúde Financeira</div>
+      <div id="kpi-saude"></div>
+    </div>
+
+    <div class="section" style="border:1px dashed var(--accent);border-radius:10px;padding:16px">
+      <div class="section-title" style="color:var(--accent)">Importar Declaração IRPF</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">
+        Importe seu arquivo <strong>.DEC</strong> da Receita Federal para pré-preencher automaticamente nome, idade, carteira de investimentos, bens, imóveis e dívidas.
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <button class="btn-add" onclick="document.getElementById('irpf-file-input').click()" style="background:var(--accent);color:#fff;padding:8px 18px;border-radius:8px;font-weight:700;font-size:13px">
+          📥 Importar IRPF (.DEC)
+        </button>
+        <input type="file" id="irpf-file-input" accept=".dec,.DEC" style="display:none" onchange="lerArquivoDEC(this)">
+        <span id="irpf-status" style="font-size:12px;color:var(--text2)"></span>
+      </div>
+      <div id="irpf-preview" style="display:none;margin-top:14px;font-size:12px;background:var(--surface2);border-radius:8px;padding:12px"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ CARTEIRA ════════════════════════ -->
+  <div id="tab-carteira" style="display:none">
+    <div class="section">
+      <div class="section-title">Carteira de Investimentos Financeiros</div>
+      <table class="tbl">
+        <thead><tr><th>Ativo / Instituição</th><th>Valor (R$)</th><th>% Carteira</th><th>% CDI</th><th>Aporte/mês (R$)</th><th>Observação</th><th></th></tr></thead>
+        <tbody id="fin-tbody"></tbody>
+        <tfoot>
+          <tr style="font-weight:700;background:var(--surface2)">
+            <td>Total</td><td id="fin-total">—</td><td>100%</td>
+            <td id="fin-cdi-t" style="color:var(--green)">—</td><td id="fin-aporte-t">—</td><td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <button class="btn-add" onclick="addFin()">+ Ativo</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Bens Imóveis, Móveis e Outros</div>
+      <table class="tbl">
+        <thead><tr><th>Descrição</th><th>Valor Mercado (R$)</th><th>Vendável?</th><th>Renda Aluguel/mês</th><th></th></tr></thead>
+        <tbody id="imovel-tbody"></tbody>
+        <tfoot>
+          <tr style="font-weight:700;background:var(--surface2)">
+            <td>Total</td><td id="imovel-total">—</td><td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <button class="btn-add" onclick="addImovel()">+ Bem</button>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Composição do Patrimônio Total</div>
+      <canvas id="chartComposicao" style="max-height:240px"></canvas>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ PROJEÇÃO ════════════════════════ -->
+  <div id="tab-projecao" style="display:none">
+
+    <div class="section">
+      <div class="section-title">Calculadora Reversa — Meta Patrimonial</div>
+      <div class="grid3">
+        <div class="field"><label>Meta patrimonial (R$)</label><input id="meta" type="text" inputmode="decimal" value="0" oninput="recalcProjecao()"></div>
+        <div class="field"><label>Prazo (anos)</label><input id="prazo_meta" type="text" inputmode="decimal" value="0" oninput="recalcProjecao()"></div>
+        <div id="pmt-result" style="display:flex;flex-direction:column;justify-content:center;"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Cenários de Projeção Patrimonial</div>
+
+      <div class="collapsible-header" onclick="toggleCollapse('taxa-brackets')">
+        <h4>⚙️ Taxas por fase de vida (variável por idade)</h4>
+        <span class="collapsible-arrow open" id="arrow-taxa-brackets">▼</span>
+      </div>
+      <div class="collapsible-body open" id="taxa-brackets">
+        <div style="padding:14px 0">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px">Rentabilidade nominal anual por fase — inspirada nas melhores práticas internacionais. Clique para editar.</div>
+          <div class="rate-bracket">
+            <div class="rate-cell"><label>Acumulação<br>(até aposentadoria)</label><input id="r1" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
+            <div class="rate-cell"><label>Aposentadoria<br>Inicial (5 anos)</label><input id="r2" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
+            <div class="rate-cell"><label>Fase Madura<br>(10 anos)</label><input id="r3" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
+            <div class="rate-cell"><label>Fase Avançada<br>(10 anos)</label><input id="r4" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
+            <div class="rate-cell"><label>Longevidade<br>(após 85)</label><input id="r5" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
+          </div>
+          <div class="toggle-row" style="margin-top:10px">
+            <label class="switch"><input type="checkbox" id="usar-taxa-variavel" onchange="recalcProjecao()"><span class="slider"></span></label>
+            <span class="toggle-label">Usar taxa variável por fase (desativado = CDI fixo)</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:14px"></div>
+      <div class="scenarios" id="scenarios-cards"></div>
+
+      <div class="chart-wrap">
+        <div class="chart-title">Evolução do Patrimônio por Cenário</div>
+        <canvas id="chartProjecao"></canvas>
+      </div>
+
+      <div class="collapsible-header" style="margin-top:16px" onclick="toggleCollapse('tabela-anual')">
+        <h4>📋 Tabela Ano a Ano (detalhe do cenário)</h4>
+        <span class="collapsible-arrow" id="arrow-tabela-anual">▼</span>
+      </div>
+      <div class="collapsible-body" id="tabela-anual">
+        <div style="padding-top:12px">
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn-sm active" id="btn-s1" onclick="selectScenario(1)">Cenário 1</button>
+            <button class="btn-sm" id="btn-s2" onclick="selectScenario(2)">Cenário 2</button>
+            <button class="btn-sm" id="btn-s3" onclick="selectScenario(3)">Cenário 3</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="tbl">
+              <thead><tr><th>Ano</th><th>Idade</th><th>Taxa</th><th>Aporte Anual</th><th>Juros do Ano</th><th>Total Aportado</th><th>Patrimônio Nominal</th><th>Patrimônio Real</th></tr></thead>
+              <tbody id="tbl-anual-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px" id="rent-resumo"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ APOSENTADORIA ═══════════════════ -->
+  <div id="tab-aposentadoria" style="display:none">
+    <div class="section">
+      <div class="section-title">Parâmetros da Aposentadoria</div>
+      <div class="grid4">
+        <div class="field"><label>Idade de aposentadoria</label><input id="idade_apo" type="text" inputmode="decimal" value="0" oninput="recalcApo()"></div>
+        <div class="field"><label>Renda mensal desejada (R$)</label><input id="renda_apo" type="text" inputmode="decimal" value="0" oninput="recalcApo()"></div>
+        <div class="field"><label>INSS / Pensão prevista (R$)</label><input id="inss" type="text" inputmode="decimal" value="0" oninput="recalcApo()"><div class="field-hint">Renda externa mensal</div></div>
+        <div class="field"><label>Renda de aluguel/mês (R$)</label><input id="renda_aluguel_apo" type="text" inputmode="decimal" value="0" oninput="recalcApo()"></div>
+        <div class="field"><label>Capital a transmitir (R$)</label><input id="capital_transmitir" type="text" inputmode="decimal" value="0" oninput="recalcApo()"></div>
+        <div class="field"><label>Liquidez imediata (%)</label><input id="liquidez" type="text" inputmode="decimal" step="1" value="0" oninput="recalcApo()"><div class="field-hint">% do patrimônio líquido</div></div>
+        <div class="field"><label>I.R considerado</label>
+          <select id="ir" onchange="recalcApo()"><option selected>Sem I.R</option><option>Com I.R (15%)</option></select>
+        </div>
+        <div class="field"><label>Regra de retirada segura (%)</label><input id="regra_retirada" type="text" inputmode="decimal" step="0.5" value="0" oninput="recalcApo()"><div class="field-hint">Regra dos 4% = sustentável</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Análise de Gap — Renda vs Necessidade</div>
+      <div class="kpi-row" id="kpi-apo"></div>
+      <div id="gap-analysis"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Projeção Pós-Aposentadoria</div>
+      <div class="chart-wrap">
+        <canvas id="chartApo"></canvas>
+      </div>
+      <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:11px;color:var(--text2)">
+        <span><span style="color:#43e97b;font-weight:700">━━</span> Viver de renda (preserva capital)</span>
+        <span><span style="color:#ef4444;font-weight:700">━━</span> Consumo gradual do patrimônio</span>
+        <span><span style="color:#6c63ff;font-weight:700">━━</span> Projeção atual (acumulação)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ METAS ════════════════════════════ -->
+  <div id="tab-metas" style="display:none">
+    <div class="section">
+      <div class="section-title">Planejador de Metas Financeiras</div>
+      <table class="tbl">
+        <thead>
+          <tr><th>Meta</th><th>Alvo (R$)</th><th>Já poupado (R$)</th><th>Meses restantes</th><th>Aporte/mês necessário</th><th>Progresso</th><th></th></tr>
+        </thead>
+        <tbody id="metas-tbody"></tbody>
+        <tfoot>
+          <tr style="background:var(--surface2);font-weight:700">
+            <td>Total</td><td id="metas-total-alvo">—</td><td id="metas-total-poupado">—</td>
+            <td>—</td><td id="metas-total-pmt" style="color:var(--accent)">—</td><td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <button class="btn-add" onclick="addMeta()">+ Meta</button>
+
+      <div class="chart-wrap" style="margin-top:16px">
+        <div class="chart-title">Metas — Alvo vs Poupado</div>
+        <canvas id="chartMetas" style="max-height:240px"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ ORÇAMENTO ════════════════════════ -->
+  <div id="tab-orcamento" style="display:none">
+    <div class="section">
+      <div class="section-title">Orçamento Mensal</div>
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="mes-btns">
+        <button class="btn-sm active" onclick="selMes(this)">JAN</button>
+        <button class="btn-sm" onclick="selMes(this)">FEV</button>
+        <button class="btn-sm" onclick="selMes(this)">MAR</button>
+        <button class="btn-sm" onclick="selMes(this)">ABR</button>
+        <button class="btn-sm" onclick="selMes(this)">MAI</button>
+        <button class="btn-sm" onclick="selMes(this)">JUN</button>
+        <button class="btn-sm" onclick="selMes(this)">JUL</button>
+        <button class="btn-sm" onclick="selMes(this)">AGO</button>
+        <button class="btn-sm" onclick="selMes(this)">SET</button>
+        <button class="btn-sm" onclick="selMes(this)">OUT</button>
+        <button class="btn-sm" onclick="selMes(this)">NOV</button>
+        <button class="btn-sm" onclick="selMes(this)">DEZ</button>
+      </div>
+
+      <div class="grid2" style="margin-bottom:14px">
+        <div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--green)">🟢 ENTRADA DE RECURSOS</div>
+          <table class="tbl">
+            <thead><tr><th>Categoria</th><th>Valor (R$)</th><th></th></tr></thead>
+            <tbody id="rec-tbody">
+              <tr><td><input value="Salário Líquido"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="13º Salário"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Férias"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Bônus / PLR"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Renda Extra / Aluguel"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Dividendos / Juros"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+            </tbody>
+            <tfoot><tr style="font-weight:700;background:var(--surface2)"><td>Receita Total</td><td id="orc-rec-total" style="color:var(--green)">—</td><td></td></tr></tfoot>
+          </table>
+          <button class="btn-add" onclick="addReceita()">+ Receita</button>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--red)">🔴 SAÍDA DE RECURSOS</div>
+          <table class="tbl">
+            <thead><tr><th>Categoria</th><th>Valor (R$)</th><th></th></tr></thead>
+            <tbody id="desp-tbody">
+              <tr><td><input value="Renda Fixa (investimento)"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Renda Variável (investimento)"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Previdência Complementar"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Aluguel / Condomínio"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Plano de Saúde"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Mercado e Alimentação"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Transporte / Combustível"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Lazer e Viagens"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Outros"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+            </tbody>
+            <tfoot><tr style="font-weight:700;background:var(--surface2)"><td>Despesa Total</td><td id="orc-desp-total" style="color:var(--red)">—</td><td></td></tr></tfoot>
+          </table>
+          <button class="btn-add" onclick="addDespesa()">+ Despesa</button>
+        </div>
+      </div>
+
+      <div class="kpi-row" id="kpi-orc"></div>
+      <div class="chart-wrap">
+        <div class="chart-title">Despesas por Categoria</div>
+        <canvas id="chartOrc" style="max-height:240px"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ PROTEÇÃO ════════════════════════ -->
+  <div id="tab-protecao" style="display:none">
+    <div class="section">
+      <div class="section-title">Proteção Familiar e Sucessão</div>
+      <div class="grid2">
+        <div class="field"><label>Necessidade de proteção imediata (R$)</label><input id="prot_imediata" type="text" inputmode="decimal" value="0" oninput="recalcProt()"></div>
+        <div class="field"><label>Liquidez para sucessão (R$)</label><input id="liquidez_suc" type="text" inputmode="decimal" value="0" oninput="recalcProt()"></div>
+      </div>
+      <div id="prot-result" style="margin-top:14px"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Projetos de Vida</div>
+      <table class="tbl">
+        <thead><tr><th>Descrição</th><th>P/F</th><th>Montante (R$)</th><th>Prazo (anos)</th><th>Aporte/mês necessário</th><th></th></tr></thead>
+        <tbody id="proj-tbody"></tbody>
+        <tfoot>
+          <tr style="background:var(--surface2);font-weight:700">
+            <td colspan="2">Total</td><td id="proj-total">—</td><td></td>
+            <td id="proj-pmt-total" style="color:var(--accent)">—</td><td></td>
+          </tr>
+        </tfoot>
+      </table>
+      <button class="btn-add" onclick="addProjeto()">+ Projeto</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Outras Receitas Futuras</div>
+      <table class="tbl">
+        <thead><tr><th>Tipo</th><th>Valor (R$)</th><th>Observações</th><th></th></tr></thead>
+        <tbody id="receitas-fut-tbody">
+          <tr><td><input value="FGTS"></td><td><input type="text" inputmode="decimal" value="0" style="width:110px"></td><td><input value=""></td><td><button class="btn-del" onclick="delRow(this)">✕</button></td></tr>
+          <tr><td><input value="Seguro de Vida"></td><td><input type="text" inputmode="decimal" value="0" style="width:110px"></td><td><input value=""></td><td><button class="btn-del" onclick="delRow(this)">✕</button></td></tr>
+        </tbody>
+      </table>
+      <button class="btn-add" onclick="addReceitaFut()">+ Receita futura</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ EDUCAÇÃO ════════════════════════ -->
+  <div id="tab-educacao" style="display:none">
+    <div class="section">
+      <div class="section-title">Planejamento Educacional</div>
+      <p style="font-size:11px;color:var(--text2);margin-bottom:14px">Incluir: mensalidades, idiomas, transporte, refeições, materiais e extracurriculares.</p>
+      <table class="tbl">
+        <thead><tr><th>Fase</th><th>Faixa Etária</th><th>Custo Total (R$)</th><th>Aporte/mês</th><th>Observações</th></tr></thead>
+        <tbody id="edu-tbody">
+          <tr><td>Pré-Escola</td><td style="color:var(--text2)">1–5 anos</td><td><input class="edu-val" type="text" inputmode="decimal" value="0" oninput="recalcEdu()" style="width:120px"></td><td class="edu-pmt" style="color:var(--text2)">—</td><td><input value=""></td></tr>
+          <tr><td>Ensino Fundamental</td><td style="color:var(--text2)">6–14 anos</td><td><input class="edu-val" type="text" inputmode="decimal" value="0" oninput="recalcEdu()" style="width:120px"></td><td class="edu-pmt" style="color:var(--text2)">—</td><td><input value=""></td></tr>
+          <tr><td>Ensino Médio</td><td style="color:var(--text2)">15–17 anos</td><td><input class="edu-val" type="text" inputmode="decimal" value="0" oninput="recalcEdu()" style="width:120px"></td><td class="edu-pmt" style="color:var(--text2)">—</td><td><input value=""></td></tr>
+          <tr><td>Ensino Superior</td><td style="color:var(--text2)">18–22 anos</td><td><input class="edu-val" type="text" inputmode="decimal" value="0" oninput="recalcEdu()" style="width:120px"></td><td class="edu-pmt" style="color:var(--text2)">—</td><td><input value=""></td></tr>
+          <tr><td>Pós-Graduação</td><td style="color:var(--text2)">23–24 anos</td><td><input class="edu-val" type="text" inputmode="decimal" value="0" oninput="recalcEdu()" style="width:120px"></td><td class="edu-pmt" style="color:var(--text2)">—</td><td><input value=""></td></tr>
+        </tbody>
+        <tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="2">Total</td><td id="edu-total">—</td><td id="edu-pmt-total" style="color:var(--accent)">—</td><td></td></tr></tfoot>
+      </table>
+      <div style="margin-top:18px;font-size:12px;font-weight:700;margin-bottom:10px">Por dependente</div>
+      <div id="edu-dep"></div>
+      <div class="chart-wrap" style="margin-top:14px">
+        <div class="chart-title">Custo por Fase</div>
+        <canvas id="chartEdu" style="max-height:200px"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ DÍVIDAS ═════════════════════════ -->
+  <div id="tab-dividas" style="display:none">
+    <div class="section">
+      <div class="section-title">Financiamentos e Dívidas</div>
+      <table class="tbl">
+        <thead><tr><th>Descrição</th><th>Saldo Devedor (R$)</th><th>Prazo (anos)</th><th>Taxa a.a (%)</th><th>Parcela/mês</th><th>Com Seguro?</th><th></th></tr></thead>
+        <tbody id="div-tbody"></tbody>
+        <tfoot>
+          <tr style="font-weight:700;background:var(--surface2)">
+            <td>Total</td><td id="div-total">—</td><td colspan="2"></td>
+            <td id="div-pmt-total" style="color:var(--red)">—</td><td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <button class="btn-add" onclick="addDiv()">+ Dívida</button>
+      <div id="div-result" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// DADOS INICIAIS
+// ══════════════════════════════════════════════════════════
+const FIN_INIT = [];
+const IMOVEL_INIT = [];
+
+let charts = {};
+let selectedScenario = 1;
+let scenarioData = [];
+
+// ══════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════
+const brl  = v => v == null ? '—' : 'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const brl0 = v => v == null ? '—' : 'R$'+Math.round(Number(v)).toLocaleString('pt-BR');
+const fmt  = (v,d=1) => Number(v).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const parseBR = v => {
+  const s = (v == null ? '' : String(v)).trim();
+  if (!s) return 0;
+  if (s.includes(',')) return +s.replace(/\./g,'').replace(',','.') || 0;
+  return +s || 0;
+};
+const g    = id => parseBR(document.getElementById(id)?.value);
+const gc   = id => document.getElementById(id)?.checked;
+
+function getTaxaParaIdade(idade, idadeApo) {
+  if (!gc('usar-taxa-variavel')) return g('cdi')/100;
+  if (idade < idadeApo) return g('r1')/100;
+  const d = idade - idadeApo;
+  if (d < 5)  return g('r2')/100;
+  if (d < 15) return g('r3')/100;
+  if (d < 25) return g('r4')/100;
+  return g('r5')/100;
+}
+
+function buildSerie(pmtAnual) {
+  const pv       = getPatrimFin();
+  const idadeAt  = g('idade');
+  const vida     = g('vida');
+  const idadeApo = g('idade_apo');
+  const infl     = g('inflacao')/100;
+  const reajuste = g('reajuste_poupanca')/100;
+  let cap = pv, cumAporte = 0, cumJuro = 0;
+  const pts = [];
+  for (let age = idadeAt; age <= vida; age++) {
+    const n     = age - idadeAt;
+    const taxa  = getTaxaParaIdade(age, idadeApo);
+    const aporte= (idadeApo===0 || age < idadeApo) ? pmtAnual * Math.pow(1+reajuste, n) : 0;
+    const juro  = cap * taxa;
+    cap = cap*(1+taxa) + aporte;
+    cumAporte += aporte; cumJuro += juro;
+    pts.push({ age, val:cap, taxa, aporte, juro, cumAporte, cumJuro, real: cap/Math.pow(1+infl,n) });
+  }
+  return pts;
+}
+
+function destroyChart(id) { if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+function mkChart(id, cfg)  { destroyChart(id); const ctx=document.getElementById(id)?.getContext('2d'); if(ctx) charts[id]=new Chart(ctx,cfg); }
+
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2600);
+}
+
+function toggleCollapse(id) {
+  document.getElementById(id)?.classList.toggle('open');
+  document.getElementById('arrow-'+id)?.classList.toggle('open');
+}
+
+// ══════════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════════
+const TABS = ['dados','carteira','projecao','aposentadoria','metas','orcamento','protecao','educacao','dividas'];
+function showTab(id) {
+  TABS.forEach(t => document.getElementById('tab-'+t).style.display = t===id?'block':'none');
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active', TABS[i]===id));
+  if(id==='carteira')      { buildFinTable(); buildImovelTable(); renderComposicao(); }
+  if(id==='projecao')      recalcProjecao();
+  if(id==='aposentadoria') recalcApo();
+  if(id==='metas')         recalcMetas();
+  if(id==='orcamento')     recalcOrc();
+  if(id==='protecao')      recalcProt();
+  if(id==='educacao')      recalcEdu();
+  if(id==='dividas')       recalcDiv();
+}
+
+// ══════════════════════════════════════════════════════════
+// CARTEIRA
+// ══════════════════════════════════════════════════════════
+function buildFinTable() {
+  const tb = document.getElementById('fin-tbody');
+  if(tb.children.length) return;
+  FIN_INIT.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML=`<td><input value="${r.nome}" oninput="recalcFin()"></td><td><input type="text" inputmode="decimal" value="${r.valor}" oninput="recalcFin()" style="width:100px"></td><td class="fin-pct-cell" style="color:var(--text2)">—</td><td><input type="text" inputmode="decimal" step="0.01" value="${r.cdi}" oninput="recalcFin()" style="width:60px"></td><td><input type="text" inputmode="decimal" step="0.01" value="${r.aporte}" oninput="recalcFin()" style="width:80px"></td><td><input value=""></td><td><button class="btn-del" onclick="delRow(this);recalcFin()">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+  recalcFin();
+}
+
+function buildImovelTable() {
+  const tb = document.getElementById('imovel-tbody');
+  if(tb.children.length) return;
+  IMOVEL_INIT.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML=`<td><input value="${r.nome}"></td><td><input type="text" inputmode="decimal" value="${r.valor}" oninput="recalcImovel()" style="width:100px"></td><td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>Não</option><option>Sim</option></select></td><td><input type="text" inputmode="decimal" value="${r.aluguel}" style="width:80px"></td><td><button class="btn-del" onclick="delRow(this);recalcImovel()">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+  recalcImovel();
+}
+
+function recalcFin() {
+  const rows = document.getElementById('fin-tbody').querySelectorAll('tr');
+  let total=0, aporte=0;
+  rows.forEach(tr=>{ total += parseBR(tr.querySelectorAll('input')[1]?.value)||0; });
+  let rentP=0;
+  rows.forEach(tr=>{
+    const inp = tr.querySelectorAll('input');
+    const v   = parseBR(inp[1]?.value)||0;
+    const cdi = parseBR(inp[2]?.value)||1;
+    const ap  = parseBR(inp[3]?.value)||0;
+    tr.querySelector('.fin-pct-cell').textContent = total>0?(v/total*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%':'0%';
+    rentP += total>0?(v/total)*(cdi/100):0;
+    aporte+= ap;
+  });
+  document.getElementById('fin-total').textContent   = brl(total);
+  document.getElementById('fin-cdi-t').textContent   = rentP.toLocaleString('pt-BR',{minimumFractionDigits:3,maximumFractionDigits:3})+' × CDI = '+(rentP*g('cdi')).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.a.';
+  document.getElementById('fin-aporte-t').textContent= brl(aporte);
+  recalcAll();
+}
+
+function recalcImovel() {
+  let t=0;
+  document.getElementById('imovel-tbody').querySelectorAll('tr').forEach(tr=>{ t += parseBR(tr.querySelectorAll('input')[1]?.value)||0; });
+  document.getElementById('imovel-total').textContent = brl(t);
+  recalcAll();
+}
+
+function getPatrimFin() { let t=0; document.getElementById('fin-tbody')?.querySelectorAll('tr').forEach(tr=>{ t += parseBR(tr.querySelectorAll('input')[1]?.value)||0; }); return t; }
+function getPatrimNaoFin() { let t=0; document.getElementById('imovel-tbody')?.querySelectorAll('tr').forEach(tr=>{ t += parseBR(tr.querySelectorAll('input')[1]?.value)||0; }); return t; }
+function getDividas() { let t=0; document.getElementById('div-tbody')?.querySelectorAll('tr').forEach(tr=>{ t += parseBR(tr.querySelectorAll('input')[1]?.value)||0; }); return t; }
+function getRentPonderada() {
+  const rows = document.getElementById('fin-tbody')?.querySelectorAll('tr')||[];
+  const total = getPatrimFin(), cdi = g('cdi')/100;
+  let rent=0;
+  rows.forEach(tr=>{ const inp=tr.querySelectorAll('input'); const v=parseBR(inp[1]?.value)||0; const cdiM=parseBR(inp[2]?.value)||1; rent+=total>0?(v/total)*(cdiM/100)*cdi:0; });
+  return rent;
+}
+
+function renderComposicao() {
+  const fin=getPatrimFin(), nfin=getPatrimNaoFin(), div=getDividas();
+  mkChart('chartComposicao',{ type:'doughnut', data:{ labels:['Patrimônio Financeiro','Bens Imóveis/Móveis','Dívidas'], datasets:[{ data:[fin,nfin,div], backgroundColor:['#6c63ff','#f7971e','#ef4444'], borderWidth:0 }] }, options:{ responsive:true, plugins:{ legend:{labels:{color:'#9090b0',font:{size:11}}}, tooltip:{callbacks:{label:c=>brl(c.parsed)}} } } });
+}
+
+// ══════════════════════════════════════════════════════════
+// RECALC GERAL
+// ══════════════════════════════════════════════════════════
+function recalcAll() {
+  const fin=getPatrimFin(), nfin=getPatrimNaoFin(), div=getDividas();
+  const total=fin+nfin, patLiq=total-div;
+  const rent=getRentPonderada(), infl=g('inflacao')/100;
+  const rentReal=(1+rent)/(1+infl)-1;
+  const rendaMensal=fin*rent/12;
+
+  document.getElementById('kpi-main').innerHTML=`
+    <div class="kpi"><div class="kpi-val">${brl0(patLiq)}</div><div class="kpi-label">Patrimônio Líquido</div><div class="kpi-sub">${brl0(total)} ativos − ${brl0(div)} dívidas</div></div>
+    <div class="kpi"><div class="kpi-val green">${brl0(fin)}</div><div class="kpi-label">Patrimônio Financeiro</div><div class="kpi-sub">${(fin/total*100||0).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% do total</div></div>
+    <div class="kpi"><div class="kpi-val gold">${brl0(nfin)}</div><div class="kpi-label">Bens Imóveis/Móveis</div><div class="kpi-sub">${(nfin/total*100||0).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% do total</div></div>
+    <div class="kpi"><div class="kpi-val">${(rent*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</div><div class="kpi-label">Rentabilidade Nominal</div><div class="kpi-sub">Real: ${(rentReal*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}% a.a.</div></div>
+    <div class="kpi"><div class="kpi-val blue">${brl0(rendaMensal)}</div><div class="kpi-label">Renda Passiva/mês</div><div class="kpi-sub">Sobre patrimônio financeiro atual</div></div>
+  `;
+
+  const ratio=total>0?div/total:0;
+  const elBal=document.getElementById('balanco-content');
+  if(elBal){
+    elBal.innerHTML=`
+      <div class="grid2">
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600">ATIVOS</div>
+          <div class="prog-row"><span class="prog-label">Patrimônio Financeiro</span><div class="prog-bar"><div class="prog-fill" style="width:${total>0?fin/total*100:0}%"></div></div><span class="prog-val">${brl0(fin)}</span></div>
+          <div class="prog-row"><span class="prog-label">Bens Imóveis/Móveis</span><div class="prog-bar"><div class="prog-fill" style="width:${total>0?nfin/total*100:0}%;background:var(--gold)"></div></div><span class="prog-val">${brl0(nfin)}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><span>Total Ativos</span><span style="color:var(--green)">${brl0(total)}</span></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600">PASSIVOS + PATRIMÔNIO LÍQUIDO</div>
+          <div class="prog-row"><span class="prog-label">Dívidas / Financiamentos</span><div class="prog-bar"><div class="prog-fill" style="width:${total>0?div/total*100:0}%;background:var(--red)"></div></div><span class="prog-val">${brl0(div)}</span></div>
+          <div class="prog-row"><span class="prog-label">Patrimônio Líquido</span><div class="prog-bar"><div class="prog-fill" style="width:${total>0?patLiq/total*100:0}%;background:var(--green)"></div></div><span class="prog-val">${brl0(patLiq)}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><span>Total</span><span style="color:var(--green)">${brl0(total)}</span></div>
+        </div>
+      </div>
+      <div class="${ratio<0.2?'alert-ok':ratio<0.4?'alert-warn':'alert-err'}" style="margin-top:10px">${ratio<0.2?'✅':'⚠️'} Dívidas = <strong>${(ratio*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong> dos ativos. ${ratio<0.2?'Alavancagem saudável.':ratio<0.4?'Moderado — monitorar.':'Elevado — priorizar quitação.'}</div>`;
+  }
+
+  // ── Indicadores de Saúde Financeira ───────────────────────────
+  const elSaude = document.getElementById('kpi-saude');
+  if (elSaude) {
+    // Receita e despesa mensais (Orçamento tab)
+    const recMensal  = [...document.querySelectorAll('.rec-val') ].reduce((s,i)=>s+(parseBR(i.value)||0),0);
+    const despMensal = [...document.querySelectorAll('.desp-val')].reduce((s,i)=>s+(parseBR(i.value)||0),0)
+                       || g('desp_mensal');
+
+    // Parcelas mensais de dívidas (recalcula do div-tbody para evitar depender de textContent)
+    let totPmtDiv = 0;
+    document.querySelectorAll('#div-tbody tr').forEach(tr=>{
+      const inp=tr.querySelectorAll('input');
+      const sd=parseBR(inp[1]?.value)||0, an=parseBR(inp[2]?.value)||1, tx=parseBR(inp[3]?.value)||10;
+      const im=tx/100/12, n=an*12;
+      totPmtDiv += im>0 ? sd*im/(1-Math.pow(1+im,-n)) : sd/n;
+    });
+
+    // Índice de Cobertura de Emergência: patrimônio financeiro / despesas mensais
+    const cobEmerg = despMensal>0 ? fin/despMensal : 0;
+    // Índice de Endividamento (fluxo de caixa): parcelas / renda mensal
+    const baseRenda = recMensal>0 ? recMensal : despMensal+g('poupanca');
+    const ieRenda   = baseRenda>0 ? totPmtDiv/baseRenda*100 : 0;
+    // Índice de Poupança: quanto da renda vai para investimento
+    const ipoup     = baseRenda>0 ? Math.max(0,(baseRenda-despMensal)/baseRenda*100) : 0;
+
+    // Fundo de emergência ideal: 3–6× despesas mensais
+    const feMeta3 = despMensal*3, feMeta6 = despMensal*6;
+
+    elSaude.innerHTML = `
+    <div class="kpi-row" style="margin-bottom:10px">
+      <div class="kpi">
+        <div class="kpi-val ${cobEmerg>=6?'green':cobEmerg>=3?'gold':'red'}">${cobEmerg.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} meses</div>
+        <div class="kpi-label">Cobertura de Emergência</div>
+        <div class="kpi-sub">${cobEmerg>=6?'✅ Excelente (≥6 meses)':cobEmerg>=3?'⚠️ Adequado (3–6 meses)':'❌ Insuficiente (<3 meses)'}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val ${ieRenda<=30?'green':ieRenda<=45?'gold':'red'}">${ieRenda.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</div>
+        <div class="kpi-label">Índice de Endividamento</div>
+        <div class="kpi-sub">${ieRenda<=30?'✅ Saudável (<30%)':ieRenda<=45?'⚠️ Moderado (31–45%)':'❌ Crítico (>45%)'} da renda</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val ${ipoup>=20?'green':ipoup>=10?'gold':'red'}">${ipoup.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</div>
+        <div class="kpi-label">Índice de Poupança</div>
+        <div class="kpi-sub">Meta: ≥20% | "Pague-se primeiro"</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val ${ratio<=0.2?'green':ratio<=0.4?'gold':'red'}">${(ratio*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</div>
+        <div class="kpi-label">Dívidas / Patrimônio</div>
+        <div class="kpi-sub">${ratio<=0.2?'✅ Baixo':ratio<=0.4?'⚠️ Moderado':'❌ Alto'}</div>
+      </div>
+    </div>
+    ${despMensal>0?`<div style="font-size:11px;color:var(--text2);margin-top:4px">
+      Fundo de emergência ideal: <strong style="color:var(--gold)">${brl0(feMeta3)}</strong> (3 meses)
+      a <strong style="color:var(--green)">${brl0(feMeta6)}</strong> (6 meses) de despesas.
+      Patrimônio financeiro atual: <strong style="color:${cobEmerg>=3?'var(--green)':'var(--red)'}">${brl0(fin)}</strong>.
+    </div>`:''}`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// PROJEÇÃO
+// ══════════════════════════════════════════════════════════
+function recalcProjecao() {
+  const pv=getPatrimFin(), cdi=g('cdi')/100, infl=g('inflacao')/100;
+  const idadeAt=g('idade'), idadeApo=g('idade_apo'), vita=g('vida');
+  const pmt1=g('poupanca')*12, pmt2=130000, pmt3=180000;
+
+  const s1=buildSerie(pmt1), s2=buildSerie(pmt2), s3=buildSerie(pmt3);
+  scenarioData=[s1,s2,s3];
+
+  // Taxa efetivamente usada na projeção (consistente com buildSerie)
+  const taxaProj = gc('usar-taxa-variavel') ? g('r1')/100 : cdi;
+  const rent=taxaProj, rentReal=(1+taxaProj)/(1+infl)-1;
+  const meta=g('meta'), nPr=g('prazo_meta');
+  let pmtNec=0;
+  if(nPr>0&&cdi>0) pmtNec=Math.max(0,(meta-pv*Math.pow(1+cdi,nPr))/((Math.pow(1+cdi,nPr)-1)/cdi)/12);
+
+  const rr=g('regra_retirada')/100||0.04;
+  const metaRegra=g('renda_apo')*12/rr;
+  const atApo=[s1,s2,s3].map(s=>{ const f=s.find(p=>p.age===idadeApo); return f?f.val:s[s.length-1].val; });
+
+  document.getElementById('pmt-result').innerHTML=`<div class="kpi" style="margin:0"><div class="kpi-val gold">${brl0(pmtNec)}/mês</div><div class="kpi-label">Poupança necessária para a meta</div><div class="kpi-sub">Em ${nPr} anos com CDI ${(cdi*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</div></div>`;
+
+  document.getElementById('scenarios-cards').innerHTML=[
+    {title:'Cenário 1 — Atual',pmt:pmt1,fv:s1[s1.length-1]?.val,atApo:atApo[0],active:false},
+    {title:'Cenário 2 — Moderado (+R$130k/ano)',pmt:pmt2,fv:s2[s2.length-1]?.val,atApo:atApo[1],active:false},
+    {title:'Cenário 3 — Acelerado (+R$180k/ano)',pmt:pmt3,fv:s3[s3.length-1]?.val,atApo:atApo[2],active:true},
+  ].map((c,i)=>`<div class="scenario-card ${c.active?'active':''}">
+    <div class="scenario-title">${c.title}</div>
+    <div class="scenario-row">Aporte anual<span>${brl0(c.pmt)}</span></div>
+    <div class="scenario-row">Patrimônio na aposentadoria<span>${brl0(c.atApo)}</span></div>
+    <div class="scenario-row">Patrimônio (${vita} anos)<span>${brl0(c.fv)}</span></div>
+    <div class="scenario-row">Meta Regra ${(rr*100).toLocaleString('pt-BR',{maximumFractionDigits:0})}%<span style="color:${c.atApo>=metaRegra?'var(--green)':'var(--red)'}">${c.atApo>=metaRegra?'✅ OK':'⚠️ Gap'}</span></div>
+  </div>`).join('');
+
+  mkChart('chartProjecao',{type:'line',data:{labels:s1.map(p=>p.age),datasets:[
+    {label:'Cenário 1',data:s1.map(p=>p.val),borderColor:'#9090b0',borderWidth:1.5,pointRadius:0,tension:0.4},
+    {label:'Cenário 2',data:s2.map(p=>p.val),borderColor:'#43e97b',borderWidth:2,pointRadius:0,tension:0.4},
+    {label:'Cenário 3',data:s3.map(p=>p.val),borderColor:'#6c63ff',borderWidth:2.5,pointRadius:0,tension:0.4},
+    {label:`Meta Regra ${(rr*100).toLocaleString('pt-BR',{maximumFractionDigits:0})}%`,data:s1.map(()=>metaRegra),borderColor:'#f7971e',borderWidth:1.5,borderDash:[6,3],pointRadius:0},
+  ]},options:chartOpts()});
+
+  document.getElementById('rent-resumo').innerHTML=`<div class="grid4">
+    <div class="kpi"><div class="kpi-val">${(rent*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</div><div class="kpi-label">Rentabilidade nominal atual</div></div>
+    <div class="kpi"><div class="kpi-val green">${(rentReal*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</div><div class="kpi-label">Rentabilidade real atual</div></div>
+    <div class="kpi"><div class="kpi-val gold">${brl0(pmtNec)}/mês</div><div class="kpi-label">Poupança p/ meta (${nPr} anos)</div></div>
+    <div class="kpi"><div class="kpi-val blue">${brl0(metaRegra)}</div><div class="kpi-label">Meta pela Regra ${(rr*100).toLocaleString('pt-BR',{maximumFractionDigits:0})}%</div></div>
+  </div>`;
+
+  renderTabelaAnual();
+}
+
+function selectScenario(n) {
+  selectedScenario=n;
+  [1,2,3].forEach(i=>document.getElementById('btn-s'+i)?.classList.toggle('active',i===n));
+  renderTabelaAnual();
+}
+
+function renderTabelaAnual() {
+  if(!scenarioData.length) return;
+  const data=scenarioData[selectedScenario-1]||[];
+  document.getElementById('tbl-anual-body').innerHTML=data.map((p,i)=>`<tr>
+    <td>${i+1}</td><td>${p.age}</td>
+    <td style="color:var(--text2)">${(p.taxa*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</td>
+    <td>${brl0(p.aporte)}</td>
+    <td style="color:var(--green)">${brl0(p.juro)}</td>
+    <td style="color:var(--text2)">${brl0(p.cumAporte)}</td>
+    <td style="font-weight:700">${brl0(p.val)}</td>
+    <td style="color:var(--text2)">${brl0(p.real)}</td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// APOSENTADORIA
+// ══════════════════════════════════════════════════════════
+function recalcApo() {
+  const pv=getPatrimFin(), rent=getRentPonderada(), infl=g('inflacao')/100;
+  const rentApo=g('rent_apo')/100, rentReal=(1+rentApo)/(1+infl)-1;
+  const idadeAt=g('idade'), vida=g('vida'), idadeApo=g('idade_apo');
+  const rendaDes=g('renda_apo'), inss=g('inss'), aluguel=g('renda_aluguel_apo');
+  const rendaExt=inss+aluguel, rendaGap=Math.max(0,rendaDes-rendaExt);
+  const nAcum=idadeApo-idadeAt, nVida=vida-idadeApo;
+  const reajuste=g('reajuste_poupanca')/100, pmt=g('poupanca')*12;
+
+  let pvApo=pv;
+  for(let k=0;k<nAcum;k++){
+    const taxa=getTaxaParaIdade(idadeAt+k, idadeApo);
+    pvApo=pvApo*(1+taxa)+pmt*Math.pow(1+reajuste,k);
+  }
+  const ir=document.getElementById('ir')?.value?.includes('15')?0.85:1.0;
+  const pvApoLiq=pvApo*ir;
+  const rr=g('regra_retirada')/100||0.04;
+  // Anuidade finita mensal: converte taxa anual → mensal e n em meses para precisão
+  const im = Math.pow(1+rentReal,1/12)-1;
+  const nm = nVida*12;
+  const rentaGerada = nm>0&&im>0 ? pvApoLiq*im/(1-Math.pow(1+im,-nm)) : pvApoLiq*rentApo/12;
+  const rendaRegra=pvApoLiq*rr/12;
+  const metaRenda=rendaGap*12/rr;
+
+  document.getElementById('kpi-apo').innerHTML=[
+    {val:brl0(pvApoLiq),label:'Patrimônio na aposentadoria',sub:`Aos ${idadeApo} anos`,cls:''},
+    {val:brl0(rentaGerada),label:'Renda sustentável/mês',sub:`Anuidade por ${nVida} anos (juro real)`,cls:rentaGerada>=rendaGap?'green':'red'},
+    {val:brl0(rendaRegra),label:`Regra dos ${(rr*100).toLocaleString('pt-BR',{maximumFractionDigits:0})}% /mês`,sub:'Safe withdrawal rate',cls:rendaRegra>=rendaGap?'green':'red'},
+    {val:brl0(rendaDes),label:'Renda desejada/mês',sub:`Externa: ${brl0(rendaExt)}/mês`,cls:''},
+    {val:brl0(metaRenda),label:'Patrimônio mínimo p/ meta',sub:`Para ${brl0(rendaGap)}/mês puro`,cls:pvApoLiq>=metaRenda?'green':'red'},
+  ].map(k=>`<div class="kpi"><div class="kpi-val ${k.cls}">${k.val}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div></div>`).join('');
+
+  const gap=rendaGap-rentaGerada;
+  const gapEl=document.getElementById('gap-analysis');
+  if(gapEl) gapEl.innerHTML=`<div class="divider"></div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:10px">Fontes de Renda na Aposentadoria</div>
+    <div class="prog-row"><span class="prog-label">Renda desejada</span><div class="prog-bar"><div class="prog-fill" style="width:100%;background:var(--border)"></div></div><span class="prog-val">${brl0(rendaDes)}</span></div>
+    <div class="prog-row"><span class="prog-label">INSS / Pensão</span><div class="prog-bar"><div class="prog-fill" style="width:${rendaDes>0?Math.min(100,inss/rendaDes*100):0}%;background:var(--blue)"></div></div><span class="prog-val">${brl0(inss)}</span></div>
+    <div class="prog-row"><span class="prog-label">Renda de aluguel</span><div class="prog-bar"><div class="prog-fill" style="width:${rendaDes>0?Math.min(100,aluguel/rendaDes*100):0}%;background:var(--gold)"></div></div><span class="prog-val">${brl0(aluguel)}</span></div>
+    <div class="prog-row"><span class="prog-label">Patrimônio financeiro</span><div class="prog-bar"><div class="prog-fill" style="width:${rendaDes>0?Math.min(100,rentaGerada/rendaDes*100):0}%"></div></div><span class="prog-val">${brl0(rentaGerada)}</span></div>
+    <div class="${gap<=0?'alert-ok':gap<rendaDes*0.3?'alert-warn':'alert-err'}" style="margin-top:10px">${gap<=0?'✅ Patrimônio suficiente para a renda desejada.':'⚠️ Gap de <strong>'+brl0(gap)+'/mês</strong>. Patrimônio adicional necessário: <strong>'+brl0(gap*12/rr)+'</strong>.'}</div>`;
+
+  const ptsPre=[], ptsR=[], ptsC=[];
+  let capR=pvApoLiq, capC=pvApoLiq;
+  for(let age=idadeAt;age<=vida;age++){
+    const n=age-idadeAt;
+    let preP=pv;
+    for(let k=0;k<Math.min(n,nAcum);k++){ const tx=getTaxaParaIdade(idadeAt+k,idadeApo); preP=preP*(1+tx)+pmt*Math.pow(1+reajuste,k); }
+    ptsPre.push({age,val:preP});
+    if(age>=idadeApo){ capR=capR*(1+rentApo); capC=Math.max(0,capC*(1+rentApo)-rendaGap*12); }
+    ptsR.push({age,val:age<idadeApo?null:capR});
+    ptsC.push({age,val:age<idadeApo?null:capC});
+  }
+
+  mkChart('chartApo',{type:'line',data:{labels:ptsPre.map(p=>p.age),datasets:[
+    {label:'Projeção atual',data:ptsPre.map(p=>p.val),borderColor:'#6c63ff',borderWidth:2,pointRadius:0,tension:0.4},
+    {label:'Viver de renda',data:ptsR.map(p=>p.val),borderColor:'#43e97b',borderWidth:2,pointRadius:0,tension:0.4},
+    {label:'Consumo gradual',data:ptsC.map(p=>p.val),borderColor:'#ef4444',borderWidth:2,pointRadius:0,tension:0.4},
+  ]},options:chartOpts()});
+}
+
+// ══════════════════════════════════════════════════════════
+// METAS
+// ══════════════════════════════════════════════════════════
+function recalcMetas() {
+  const rows=document.querySelectorAll('#metas-tbody tr');
+  let totA=0,totP=0,totPmt=0;
+  const labels=[],dataA=[],dataP=[];
+  rows.forEach(tr=>{
+    const inp=tr.querySelectorAll('input');
+    const nome=inp[0]?.value||'Meta', alvo=parseBR(inp[1]?.value)||0;
+    const poupado=parseBR(inp[2]?.value)||0, meses=parseBR(inp[3]?.value)||1;
+    const pmt=Math.max(0,alvo-poupado)/meses;
+    const prog=alvo>0?Math.min(100,poupado/alvo*100):0;
+    const pmtCell=tr.querySelector('.meta-pmt'); if(pmtCell)pmtCell.textContent=brl0(pmt)+'/mês';
+    const pc=tr.querySelector('.meta-prog'); if(pc)pc.innerHTML=`<div style="display:flex;align-items:center;gap:6px"><div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:${prog}%"></div></div><span style="font-size:10px;color:var(--text2);width:32px">${Math.round(prog).toLocaleString('pt-BR')}%</span></div>`;
+    totA+=alvo;totP+=poupado;totPmt+=pmt;
+    labels.push(nome.length>18?nome.substring(0,16)+'…':nome);
+    dataA.push(alvo);dataP.push(poupado);
+  });
+  document.getElementById('metas-total-alvo').textContent=brl0(totA);
+  document.getElementById('metas-total-poupado').textContent=brl0(totP);
+  document.getElementById('metas-total-pmt').textContent=brl0(totPmt)+'/mês';
+  mkChart('chartMetas',{type:'bar',data:{labels,datasets:[
+    {label:'Alvo',data:dataA,backgroundColor:'rgba(108,99,255,.5)',borderRadius:6},
+    {label:'Poupado',data:dataP,backgroundColor:'rgba(67,233,123,.7)',borderRadius:6},
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#9090b0',font:{size:11}}},tooltip:{callbacks:{label:c=>brl(c.parsed.y)}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9090b0'}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9090b0',callback:v=>brl0(v)}}}}});
+}
+
+// ══════════════════════════════════════════════════════════
+// ORÇAMENTO
+// ══════════════════════════════════════════════════════════
+function selMes(btn) {
+  document.querySelectorAll('#mes-btns .btn-sm').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function recalcOrc() {
+  let rec=0,desp=0;
+  document.querySelectorAll('.rec-val').forEach(i=>{ rec+=parseBR(i.value)||0; });
+  document.querySelectorAll('.desp-val').forEach(i=>{ desp+=parseBR(i.value)||0; });
+  const saldo=rec-desp, txInv=rec>0?(rec-desp)/rec*100:0;
+  document.getElementById('orc-rec-total').textContent=brl(rec);
+  document.getElementById('orc-desp-total').textContent=brl(desp);
+  document.getElementById('kpi-orc').innerHTML=`
+    <div class="kpi"><div class="kpi-val green">${brl0(rec)}</div><div class="kpi-label">Receita Total</div></div>
+    <div class="kpi"><div class="kpi-val red">${brl0(desp)}</div><div class="kpi-label">Despesa Total</div></div>
+    <div class="kpi"><div class="kpi-val ${saldo>=0?'green':'red'}">${brl0(saldo)}</div><div class="kpi-label">Saldo do Mês</div></div>
+    <div class="kpi"><div class="kpi-val ${txInv>=20?'green':txInv>=10?'gold':'red'}">${txInv.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</div><div class="kpi-label">Taxa de Poupança</div><div class="kpi-sub">Meta: ≥20%</div></div>`;
+  const cats=[...document.querySelectorAll('#desp-tbody tr')].map(tr=>tr.querySelector('input')?.value||'?');
+  const vals=[...document.querySelectorAll('.desp-val')].map(i=>parseBR(i.value)||0);
+  mkChart('chartOrc',{type:'bar',data:{labels:cats,datasets:[{label:'Despesas',data:vals,backgroundColor:vals.map((_,i)=>['#6c63ff','#43e97b','#f7971e','#ef4444','#3b82f6','#8b5cf6','#06b6d4','#f59e0b','#10b981','#e11d48'][i%10]),borderRadius:6}]},options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>brl(c.parsed.x)}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9090b0',callback:v=>brl0(v)}},y:{grid:{display:false},ticks:{color:'#9090b0',font:{size:10}}}}}});
+}
+
+// ══════════════════════════════════════════════════════════
+// PROTEÇÃO
+// ══════════════════════════════════════════════════════════
+function recalcProt() {
+  const fin=getPatrimFin(),protN=g('prot_imediata'),liqSuc=g('liquidez_suc');
+  const cobr=fin>=protN+liqSuc, deficit=fin-protN-liqSuc;
+  const el=document.getElementById('prot-result');
+  if(el) el.innerHTML=`<div class="grid2"><div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600">Necessidade vs Patrimônio Financeiro</div>
+    <div class="prog-row"><span class="prog-label">Patrimônio financeiro</span><div class="prog-bar"><div class="prog-fill" style="width:100%"></div></div><span class="prog-val">${brl0(fin)}</span></div>
+    <div class="prog-row"><span class="prog-label">Proteção imediata</span><div class="prog-bar"><div class="prog-fill" style="width:${fin>0?Math.min(100,protN/fin*100):0}%;background:var(--red)"></div></div><span class="prog-val">${brl0(protN)}</span></div>
+    <div class="prog-row"><span class="prog-label">Liquidez sucessão</span><div class="prog-bar"><div class="prog-fill" style="width:${fin>0?Math.min(100,liqSuc/fin*100):0}%;background:var(--gold)"></div></div><span class="prog-val">${brl0(liqSuc)}</span></div>
+  </div><div><div class="${cobr?'alert-ok':'alert-err'}">${cobr?'✅ Patrimônio suficiente para cobrir proteção + sucessão.':'⚠️ Déficit de <strong>'+brl0(Math.abs(deficit))+'</strong>. Considere seguro de vida ou aportes adicionais.'}</div></div></div>`;
+
+  const cdi=g('cdi')/100;
+  let totM=0,totPmt=0;
+  document.querySelectorAll('#proj-tbody tr').forEach(tr=>{
+    const inp=tr.querySelectorAll('input');
+    const m=parseBR(inp[1]?.value)||0, anos=parseBR(inp[2]?.value)||1;
+    const pmt=anos>0&&cdi>0?m/((Math.pow(1+cdi,anos)-1)/cdi)/12:m/(anos*12);
+    const pc=tr.querySelector('.proj-pmt'); if(pc)pc.textContent=brl0(pmt)+'/mês';
+    totM+=m;totPmt+=pmt;
+  });
+  const elT=document.getElementById('proj-total'); if(elT)elT.textContent=brl0(totM);
+  const elPMT=document.getElementById('proj-pmt-total'); if(elPMT)elPMT.textContent=brl0(totPmt)+'/mês';
+}
+
+// ══════════════════════════════════════════════════════════
+// EDUCAÇÃO
+// ══════════════════════════════════════════════════════════
+function recalcEdu() {
+  const vals=[...document.querySelectorAll('.edu-val')].map(i=>parseBR(i.value)||0);
+  const total=vals.reduce((a,b)=>a+b,0);
+  const cdi=g('cdi')/100, prazos=[5,9,3,5,2];
+  let pmtTot=0;
+  document.querySelectorAll('.edu-pmt').forEach((td,i)=>{
+    const n=prazos[i]||1, pmt=vals[i]>0&&cdi>0?vals[i]/((Math.pow(1+cdi,n)-1)/cdi)/12:0;
+    td.textContent=pmt>0?brl0(pmt)+'/mês':'—'; pmtTot+=pmt;
+  });
+  document.getElementById('edu-total').textContent=brl0(total);
+  document.getElementById('edu-pmt-total').textContent=brl0(pmtTot)+'/mês';
+  const deps=[...document.getElementById('dep-tbody')?.querySelectorAll('tr')||[]];
+  const fases=['Pré-Escola','Fundamental','Médio','Superior','Pós'];
+  document.getElementById('edu-dep').innerHTML=deps.length===0?'<p style="font-size:11px;color:var(--text2)">Nenhum dependente.</p>':deps.map(tr=>{
+    const nome=tr.querySelectorAll('input')[0]?.value||'Dep.';
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px"><div style="font-size:12px;font-weight:700;margin-bottom:8px">${nome}</div>${fases.map((f,i)=>`<div class="prog-row"><span class="prog-label">${f}</span><div class="prog-bar"><div class="prog-fill" style="width:${total>0?vals[i]/total*100:0}%"></div></div><span class="prog-val">${brl0(vals[i])}</span></div>`).join('')}</div>`;
+  }).join('');
+  mkChart('chartEdu',{type:'bar',data:{labels:fases,datasets:[{label:'Custo estimado',data:vals,backgroundColor:['#6c63ff','#43e97b','#f7971e','#ef4444','#3b82f6'],borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>brl(c.parsed.y)}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9090b0'}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9090b0',callback:v=>brl0(v)}}}}});
+}
+
+// ══════════════════════════════════════════════════════════
+// DÍVIDAS
+// ══════════════════════════════════════════════════════════
+function recalcDiv() {
+  let totS=0,totPmt=0;
+  document.querySelectorAll('#div-tbody tr').forEach(tr=>{
+    const inp=tr.querySelectorAll('input');
+    const s=parseBR(inp[1]?.value)||0,anos=parseBR(inp[2]?.value)||1,taxa=parseBR(inp[3]?.value)||10;
+    const im=taxa/100/12,n=anos*12;
+    const pmt=im>0?s*im/(1-Math.pow(1+im,-n)):s/n;
+    const pc=tr.querySelector('.div-pmt'); if(pc)pc.textContent=brl0(pmt)+'/mês';
+    totS+=s;totPmt+=pmt;
+  });
+  const elT=document.getElementById('div-total'); if(elT)elT.textContent=brl0(totS);
+  const elPMT=document.getElementById('div-pmt-total'); if(elPMT)elPMT.textContent=brl0(totPmt)+'/mês';
+  const fin=getPatrimFin(),ratio=fin>0?totS/fin:0;
+  const elR=document.getElementById('div-result'); if(elR)elR.innerHTML=`<div class="${ratio<0.3?'alert-ok':ratio<0.5?'alert-warn':'alert-err'}">${ratio<0.3?'✅':'⚠️'} Dívidas = <strong>${(ratio*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong> do patrimônio financeiro. Parcela total: <strong>${brl0(totPmt)}/mês</strong>.</div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// CHART OPTIONS
+// ══════════════════════════════════════════════════════════
+function chartOpts(){
+  return{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#9090b0',font:{size:10}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl0(c.parsed.y)}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9090b0',maxTicksLimit:10}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9090b0',callback:v=>{if(v>=1e9)return'R$'+(v/1e9).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'B';if(v>=1e6)return'R$'+(v/1e6).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'M';if(v>=1e3)return'R$'+(v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:0})+'k';return'R$'+v;}}}}};
+}
+
+// ══════════════════════════════════════════════════════════
+// ADD ROWS
+// ══════════════════════════════════════════════════════════
+function addDep(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" style="width:60px"></td><td><input value=""></td><td><button class="btn-del" onclick="delRow(this)">✕</button></td>`;document.getElementById('dep-tbody').appendChild(tr);}
+function addFin(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value="" oninput="recalcFin()"></td><td><input type="text" inputmode="decimal" value="0" oninput="recalcFin()" style="width:100px"></td><td class="fin-pct-cell" style="color:var(--text2)">—</td><td><input type="text" inputmode="decimal" step="0.01" value="1" oninput="recalcFin()" style="width:60px"></td><td><input type="text" inputmode="decimal" step="0.01" value="0" oninput="recalcFin()" style="width:80px"></td><td><input value=""></td><td><button class="btn-del" onclick="delRow(this);recalcFin()">✕</button></td>`;document.getElementById('fin-tbody').appendChild(tr);recalcFin();}
+function addImovel(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" oninput="recalcImovel()" style="width:100px"></td><td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>Não</option><option>Sim</option></select></td><td><input type="text" inputmode="decimal" value="0" style="width:80px"></td><td><button class="btn-del" onclick="delRow(this);recalcImovel()">✕</button></td>`;document.getElementById('imovel-tbody').appendChild(tr);recalcImovel();}
+function addMeta(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value="Nova Meta"></td><td><input type="text" inputmode="decimal" value="100000" style="width:110px" oninput="recalcMetas()"></td><td><input type="text" inputmode="decimal" value="0" style="width:110px" oninput="recalcMetas()"></td><td><input type="text" inputmode="decimal" value="12" style="width:70px" oninput="recalcMetas()"></td><td class="meta-pmt" style="color:var(--accent);font-weight:700">—</td><td class="meta-prog"><div class="prog-bar"><div class="prog-fill" style="width:0%"></div></div></td><td><button class="btn-del" onclick="delRow(this);recalcMetas()">✕</button></td>`;document.getElementById('metas-tbody').appendChild(tr);recalcMetas();}
+function addReceita(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td>`;document.getElementById('rec-tbody').appendChild(tr);recalcOrc();}
+function addDespesa(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td>`;document.getElementById('desp-tbody').appendChild(tr);recalcOrc();}
+function addProjeto(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>F</option><option>P</option></select></td><td><input type="text" inputmode="decimal" value="0" style="width:110px" oninput="recalcProt()"></td><td><input type="text" inputmode="decimal" value="5" style="width:60px" oninput="recalcProt()"></td><td class="proj-pmt" style="color:var(--accent);font-weight:700">—</td><td><button class="btn-del" onclick="delRow(this);recalcProt()">✕</button></td>`;document.getElementById('proj-tbody').appendChild(tr);recalcProt();}
+function addReceitaFut(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" style="width:110px"></td><td><input value=""></td><td><button class="btn-del" onclick="delRow(this)">✕</button></td>`;document.getElementById('receitas-fut-tbody').appendChild(tr);}
+function addDiv(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" style="width:110px" oninput="recalcDiv()"></td><td><input type="text" inputmode="decimal" value="1" style="width:55px" oninput="recalcDiv()"></td><td><input type="text" inputmode="decimal" step="0.1" value="12" style="width:60px" oninput="recalcDiv()"></td><td class="div-pmt" style="color:var(--red);font-weight:700">—</td><td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>SIM</option><option>NÃO</option></select></td><td><button class="btn-del" onclick="delRow(this);recalcDiv()">✕</button></td>`;document.getElementById('div-tbody').appendChild(tr);recalcDiv();}
+function delRow(btn){btn.closest('tr').remove();}
+
+// ══════════════════════════════════════════════════════════
+// IMPORTAR IRPF .DEC
+// ══════════════════════════════════════════════════════════
+function lerArquivoDEC(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('irpf-status');
+  status.textContent = 'Lendo arquivo...';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const dados = parseDEC(e.target.result);
+      mostrarPreviewDEC(dados);
+      status.textContent = '✅ Arquivo lido com sucesso!';
+    } catch(err) {
+      status.textContent = '❌ Erro ao processar: ' + err.message;
+    }
+  };
+  reader.readAsText(file, 'latin1');
+  input.value = '';
+}
+
+function parseDEC(texto) {
+  const linhas = texto.split(/\r?\n/);
+  const hoje = new Date();
+  const res = {
+    nome:'', idade:0, email:'',
+    rendaPJ:[],     // rec.26: rendimentos tributáveis de PJ
+    dividendos:[],  // rec.84: tributação exclusiva (dividendos, 13º, PLR)
+    isentos:[],     // rec.88: rendimentos isentos (fundos, CRI, CRA, LCA)
+    pagamentos:[],  // rec.23: pagamentos dedutíveis (saúde, educação)
+    pgbl:0,         // rec.24: contribuição PGBL anual
+    ativos:[], imoveis:[], dividas:[]
+  };
+
+  const GRP_FIN    = new Set(['01','02','03','04','05','06','07','08','09','10']);
+  const GRP_IMOVEL = new Set(['11','12','13','14','15','16','17','18','19']);
+  const LABEL_GRUPO = {
+    '01':'Conta/RF','02':'Renda Fixa','03':'Isento (CRA/CRI/LCA/LCI)',
+    '04':'Renda Variável','05':'Fundos','06':'Prev. Privada','07':'Criptoativos',
+    '08':'Outros RF','09':'Dívida Ativa','10':'Moeda/Espécie',
+    '11':'Imóvel','12':'Imóvel','13':'Imóvel','14':'Imóvel','15':'Imóvel',
+    '20':'Participação societária','21':'Veículo','22':'Veículo','99':'Outros bens'
+  };
+  const DESC_PAG = {
+    '0001':'Previdência Social','0002':'Previdência Compl. (VGBL)',
+    '0006':'Prev. Privada PGBL','0007':'FAPI',
+    '0009':'Saúde (plano e consultas)','0010':'Arrendamento Rural',
+    '0012':'Instrução / Educação','0014':'Médico no Exterior','0999':'Outros'
+  };
+  const DESC_EXCL = {
+    '0001':'13º salário','0002':'PLR (participação nos lucros)',
+    '0003':'Outros exclusivos','0004':'Rescisão','0009':'Dividendos / Lucros',
+    '0010':'Juros s/ Capital Próprio','0011':'Aplic. Financeiras (IRRF)',
+    '0012':'13º – Investimentos'
+  };
+
+  for (const l of linhas) {
+    if (l.length < 13) continue;
+    const tipo = l.substring(0,2);
+
+    // ── Dados pessoais (registro 16) ───────────────────────
+    if (tipo === '16') {
+      res.nome = l.substring(13,73).trim();
+      const mEmail = l.match(/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/);
+      if (mEmail) res.email = mEmail[0].toLowerCase();
+      const mData = l.substring(200).match(/(\d{2})(\d{2})(19\d{2}|200\d|201[0-5])/);
+      if (mData) {
+        const dia=parseInt(mData[1]),mes=parseInt(mData[2]),ano=parseInt(mData[3]);
+        if (dia>=1&&dia<=31&&mes>=1&&mes<=12) {
+          let idade=hoje.getFullYear()-ano;
+          if(hoje.getMonth()+1<mes||(hoje.getMonth()+1===mes&&hoje.getDate()<dia))idade--;
+          res.idade=idade;
+        }
+      }
+    }
+
+    // ── Rendimentos tributáveis de PJ (registro 26) ─────────
+    // IRPF 2026: 26+CPF(11)+tipoR(1)+tit(1)+pad(4)+CNPJ(14)+nome(60)+pad(12)+valBruto(13)+...
+    if (tipo === '26' && l.length > 118) {
+      const nomeF = l.substring(33,93).replace(/^[\d\s]+/,'').trim();
+      if (nomeF.startsWith('DIRF')) continue;
+      const valBruto = parseInt(l.substring(105,118)) / 100;
+      if (!isNaN(valBruto) && valBruto > 0 && valBruto < 10000000)
+        res.rendaPJ.push({ fonte:nomeF, valBruto, valIRRF:0 });
+    }
+
+    // ── Tributação exclusiva: dividendos, 13º, PLR (registro 84) ──
+    // IRPF 2026: 84+CPF(11)+tipoB(1)+CPF(11)+cod(4)+CNPJ(14)+nome(60)+valor(13)+IR(13)+...
+    if (tipo === '84' && l.length > 115) {
+      const cod   = l.substring(25,29);
+      const nomeF = l.substring(43,103).trim();
+      if (nomeF.startsWith('DIRF')) continue;
+      const valor = parseInt(l.substring(103,116)) / 100;
+      const irRet = parseInt(l.substring(116,129)) / 100;
+      if (!isNaN(valor) && valor > 0 && valor < 5000000)
+        res.dividendos.push({ codigo:cod, desc:DESC_EXCL[cod]||'Tributação exclusiva', fonte:nomeF, valor, irRet:isNaN(irRet)?0:irRet });
+    }
+
+    // ── Rendimentos isentos e não tributáveis (registro 88) ──
+    // Mesmo layout que 84 (IRPF 2026: nome 60ch, valor em 103-116)
+    if (tipo === '88' && l.length > 115) {
+      const cod   = l.substring(25,29);
+      const nomeF = l.substring(43,103).trim();
+      if (nomeF.startsWith('DIRF')) continue;
+      const valor = parseInt(l.substring(103,116)) / 100;
+      if (!isNaN(valor) && valor > 0 && valor < 2000000)
+        res.isentos.push({ codigo:cod, fonte:nomeF, valor });
+    }
+
+    // ── Pagamentos dedutíveis (registro 23) ────────────────
+    // Layout: 23+CPF(11)+cod(4)+valor(13)+...
+    if (tipo === '23' && l.length > 30) {
+      const cod   = l.substring(13,17);
+      const valor = parseInt(l.substring(17,30)) / 100;
+      if (!isNaN(valor) && valor > 0 && valor < 5000000)
+        res.pagamentos.push({ codigo:cod, desc:DESC_PAG[cod]||'Pagamento '+cod, valor });
+    }
+
+    // ── Previdência complementar PGBL (registro 24, código 0006) ──
+    if (tipo === '24' && l.length > 30) {
+      const cod   = l.substring(13,17);
+      const valor = parseInt(l.substring(17,30)) / 100;
+      if (!isNaN(valor) && valor > 0 && cod === '0006') res.pgbl += valor;
+    }
+
+    // ── Bens e Direitos (registro 27) ──────────────────────
+    if (tipo === '27' && l.length > 50) {
+      const grupo  = l.substring(13,15);
+      const codigo = l.substring(15,17);
+      const disc   = l.substring(19,519).replace(/\s+/g,' ').trim();
+      const m = l.match(/(?<!\d)(\d{13})(\d{13})(?!\d)/);
+      if (m) {
+        const v2024=parseInt(m[1])/100, v2025=parseInt(m[2])/100;
+        const valor=v2025>0?v2025:v2024;
+        if (valor>0) {
+          const cat  = LABEL_GRUPO[grupo]||'Outro';
+          const desc = disc.length>60?disc.substring(0,57)+'...':disc;
+          // Só grupos 11-19 são imóveis; o restante (inclusive grupo 99) é financeiro
+          (GRP_IMOVEL.has(grupo)?res.imoveis:res.ativos).push({
+            grupo, codigo, cat:GRP_IMOVEL.has(grupo)?'Imóvel':cat, desc, v2024, v2025, valor
+          });
+        }
+      }
+    }
+
+    // ── Dívidas e Ônus (registro 28) ───────────────────────
+    if (tipo === '28' && l.length > 42) {
+      const tail = l.trimEnd();
+      const len  = tail.length;
+      // IRPF 2026+: trailer de 23 chars (campo9 + CNPJ credor 14) após os valores monetários.
+      // Tenta offsets novos (-49:-36, -36:-23) primeiro; cai nos antigos se não forem 13 dígitos.
+      let raw2024, raw2025, descEnd;
+      const t24n = tail.slice(-49,-36).trim(), t25n = tail.slice(-36,-23).trim();
+      if (/^\d{13}$/.test(t24n) && /^\d{13}$/.test(t25n) &&
+          (parseInt(t24n) > 0 || parseInt(t25n) > 0)) {
+        raw2024 = t24n; raw2025 = t25n; descEnd = len - 49;
+      } else {
+        raw2024 = tail.slice(-26,-13).trim(); raw2025 = tail.slice(-13).trim(); descEnd = len - 26;
+      }
+      if (/^\d+$/.test(raw2024) && /^\d+$/.test(raw2025)) {
+        const v2024 = parseInt(raw2024)/100, v2025 = parseInt(raw2025)/100;
+        const saldo = v2025>0 ? v2025 : v2024;
+        const disc = tail.slice(15, descEnd).replace(/\s+/g,' ').trim().substring(0,80);
+        if (saldo>0.01 && saldo<50000000)
+          res.dividas.push({ desc:disc||'Dívida/Ônus', v2024, v2025, saldo });
+      }
+    }
+  }
+
+  return res;
+}
+
+function mostrarPreviewDEC(dados) {
+  const preview = document.getElementById('irpf-preview');
+  const brl  = v => 'R$'+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const brl0 = v => 'R$'+Math.round(v).toLocaleString('pt-BR');
+
+  const totalRendaPJ  = dados.rendaPJ.reduce((s,x)=>s+x.valBruto,0);
+  const totalDividend = dados.dividendos.reduce((s,x)=>s+x.valor,0);
+  const totalIsentos  = dados.isentos.reduce((s,x)=>s+x.valor,0);
+  const totalRendaAnual = totalRendaPJ + totalDividend + totalIsentos;
+  const rendaMensal = totalRendaAnual / 12;
+
+  const totalFin    = dados.ativos.reduce((s,a)=>s+a.valor,0);
+  const totalImovel = dados.imoveis.reduce((s,a)=>s+a.valor,0);
+  const totalDividas= dados.dividas.reduce((s,d)=>s+d.saldo,0);
+
+  let html = `
+  <div style="font-weight:700;font-size:13px;margin-bottom:12px;color:var(--accent)">
+    📋 Resumo – Declaração IRPF 2026 (ano-base 2025)
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-bottom:14px;font-size:12px">
+    <div><span style="color:var(--text2)">Nome</span><br><strong>${dados.nome||'—'}</strong></div>
+    <div><span style="color:var(--text2)">Idade</span><br><strong>${dados.idade||'—'} anos</strong></div>
+    ${dados.email?`<div><span style="color:var(--text2)">E-mail</span><br><strong style="font-size:11px">${dados.email}</strong></div>`:''}
+    ${dados.pgbl>0?`<div><span style="color:var(--text2)">PGBL anual</span><br><strong style="color:var(--gold)">${brl(dados.pgbl)}</strong></div>`:''}
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+    <div style="background:var(--surface2);border-radius:8px;padding:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">RENDA DECLARADA 2025</div>
+      ${dados.rendaPJ.map(x=>`
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <span style="color:var(--text2)">${x.fonte.length>32?x.fonte.substring(0,30)+'…':x.fonte}</span>
+          <strong style="color:var(--green)">${brl(x.valBruto)}</strong>
+        </div>`).join('')}
+      ${totalDividend>0?`
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <span style="color:var(--text2)">Dividendos / lucros (${dados.dividendos.length} fontes)</span>
+          <strong style="color:var(--green)">${brl(totalDividend)}</strong>
+        </div>`:''}
+      ${totalIsentos>0?`
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <span style="color:var(--text2)">Rendimentos isentos (${dados.isentos.length} fontes)</span>
+          <strong style="color:var(--green)">${brl(totalIsentos)}</strong>
+        </div>`:''}
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;margin-top:4px;font-weight:700;border-top:1px solid rgba(255,255,255,.1)">
+        <span>Total anual</span><span style="color:var(--green)">${brl(totalRendaAnual)}</span>
+      </div>
+      <div style="text-align:right;font-size:10px;color:var(--text2)">≈ ${brl0(rendaMensal)}/mês</div>
+    </div>
+
+    <div style="background:var(--surface2);border-radius:8px;padding:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:6px">PATRIMÔNIO (31/12/2025)</div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">
+        <span style="color:var(--text2)">Investimentos financeiros (${dados.ativos.length})</span>
+        <strong style="color:var(--green)">${brl(totalFin)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">
+        <span style="color:var(--text2)">Bens e imóveis (${dados.imoveis.length})</span>
+        <strong style="color:var(--blue)">${brl(totalImovel)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">
+        <span style="color:var(--text2)">Dívidas (${dados.dividas.length})</span>
+        <strong style="color:var(--red)">-${brl(totalDividas)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;margin-top:4px;font-weight:700;border-top:1px solid rgba(255,255,255,.1)">
+        <span>Patrimônio líquido</span>
+        <span style="color:var(--${totalFin+totalImovel-totalDividas>=0?'green':'red'})">${brl(totalFin+totalImovel-totalDividas)}</span>
+      </div>
+    </div>
+  </div>
+
+  ${(dados.pagamentos.length>0||dados.pgbl>0)?`
+  <div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:12px">
+    <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px">DESPESAS DEDUTÍVEIS 2025</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+      ${dados.pagamentos.map(p=>`
+        <div style="font-size:11px">
+          <span style="color:var(--text2)">${p.desc}</span>
+          <div style="font-weight:700;color:var(--gold)">${brl(p.valor)}<span style="font-size:10px;font-weight:400;color:var(--text2)"> /ano ≈ ${brl0(p.valor/12)}/mês</span></div>
+        </div>`).join('')}
+      ${dados.pgbl>0?`
+        <div style="font-size:11px">
+          <span style="color:var(--text2)">PGBL (aposentadoria)</span>
+          <div style="font-weight:700;color:var(--gold)">${brl(dados.pgbl)}<span style="font-size:10px;font-weight:400;color:var(--text2)"> /ano ≈ ${brl0(dados.pgbl/12)}/mês</span></div>
+        </div>`:''}
+    </div>
+  </div>`:''}
+
+  <details style="margin-bottom:12px"><summary style="cursor:pointer;color:var(--accent);font-size:11px">Ver todos os itens (${dados.ativos.length+dados.imoveis.length+dados.dividas.length})</summary>
+  <div style="margin-top:8px;font-size:11px">
+    ${dados.ativos.map(a=>`<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--text2);min-width:120px;display:inline-block">${a.cat}</span> ${a.desc} → <strong style="color:var(--green)">${brl(a.valor)}</strong></div>`).join('')}
+    ${dados.imoveis.map(a=>`<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--text2);min-width:120px;display:inline-block">${a.cat}</span> ${a.desc} → <strong style="color:var(--blue)">${brl(a.valor)}</strong></div>`).join('')}
+    ${dados.dividas.map(d=>`<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--red);min-width:120px;display:inline-block">Dívida</span> ${d.desc} → <strong style="color:var(--red)">${brl(d.saldo)}</strong></div>`).join('')}
+  </div></details>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <button onclick="aplicarDEC(irpfDadosTemp)" style="background:var(--green);color:#000;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px">
+      ✅ Aplicar tudo ao planejador
+    </button>
+    <button onclick="document.getElementById('irpf-preview').style.display='none'" style="background:var(--surface2);color:var(--text);border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px">
+      Cancelar
+    </button>
+    <span style="font-size:10px;color:var(--text2)">⚠️ Valores declarados na DIRPF (custo de aquisição). Confira antes de salvar.</span>
+  </div>`;
+
+  preview.innerHTML = html;
+  preview.style.display = 'block';
+  window.irpfDadosTemp = dados;
+}
+
+function aplicarDEC(dados) {
+  if (!dados) return;
+
+  // ── Dados pessoais ──────────────────────────────────────
+  if (dados.nome) document.getElementById('nome').value = dados.nome;
+  if (dados.idade > 0) document.getElementById('idade').value = dados.idade;
+
+  // ── PGBL → campo poupança mensal ───────────────────────
+  if (dados.pgbl > 0) {
+    const poupEl = document.getElementById('poupanca');
+    if (poupEl) poupEl.value = fmtInput((dados.pgbl / 12));
+  }
+
+  // ── Carteira financeira ────────────────────────────────
+  const finTbody = document.getElementById('fin-tbody');
+  finTbody.innerHTML = '';
+  for (const a of dados.ativos) {
+    const cdi = a.grupo==='10'?0:100;
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td><input value="${esc(a.desc)}" oninput="recalcFin()"></td>` +
+      `<td><input type="text" inputmode="decimal" value="${fmtInput(a.valor)}" oninput="recalcFin()" style="width:100px"></td>` +
+      `<td class="fin-pct-cell" style="color:var(--text2)">—</td>` +
+      `<td><input type="text" inputmode="decimal" step="0.01" value="${cdi}" oninput="recalcFin()" style="width:60px"></td>` +
+      `<td><input type="text" inputmode="decimal" step="0.01" value="0" oninput="recalcFin()" style="width:80px"></td>` +
+      `<td><input value="${esc(a.cat)}"></td>` +
+      `<td><button class="btn-del" onclick="delRow(this);recalcFin()">✕</button></td>`;
+    finTbody.appendChild(tr);
+  }
+  recalcFin();
+
+  // ── Bens e imóveis ─────────────────────────────────────
+  const imovelTbody = document.getElementById('imovel-tbody');
+  imovelTbody.innerHTML = '';
+  for (const a of dados.imoveis) {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td><input value="${esc(a.desc)}"></td>` +
+      `<td><input type="text" inputmode="decimal" value="${fmtInput(a.valor)}" oninput="recalcImovel()" style="width:100px"></td>` +
+      `<td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>Não</option><option>Sim</option></select></td>` +
+      `<td><input type="text" inputmode="decimal" value="0" style="width:80px"></td>` +
+      `<td><button class="btn-del" onclick="delRow(this);recalcImovel()">✕</button></td>`;
+    imovelTbody.appendChild(tr);
+  }
+  recalcImovel();
+
+  // ── Dívidas ────────────────────────────────────────────
+  const divTbody = document.getElementById('div-tbody');
+  divTbody.innerHTML = '';
+  for (const d of dados.dividas) {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td><input value="${esc(d.desc)}"></td>` +
+      `<td><input type="text" inputmode="decimal" value="${fmtInput(d.saldo)}" style="width:110px" oninput="recalcDiv()"></td>` +
+      `<td><input type="text" inputmode="decimal" value="30" style="width:55px" oninput="recalcDiv()"></td>` +
+      `<td><input type="text" inputmode="decimal" step="0.1" value="9,00" style="width:60px" oninput="recalcDiv()"></td>` +
+      `<td class="div-pmt" style="color:var(--red);font-weight:700">—</td>` +
+      `<td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>SIM</option><option>NÃO</option></select></td>` +
+      `<td><button class="btn-del" onclick="delRow(this);recalcDiv()">✕</button></td>`;
+    divTbody.appendChild(tr);
+  }
+  recalcDiv();
+
+  // ── Orçamento: Receitas ─────────────────────────────────
+  const recTbody = document.getElementById('rec-tbody');
+  if (recTbody) {
+    recTbody.innerHTML = '';
+    for (const x of dados.rendaPJ) {
+      const label = x.fonte.length>42?x.fonte.substring(0,40)+'…':x.fonte;
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td><input value="${esc(label)}"></td>` +
+        `<td><input type="text" inputmode="decimal" value="${fmtInput((x.valBruto/12))}" class="rec-val" oninput="recalcOrc()"></td>` +
+        `<td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td>`;
+      recTbody.appendChild(tr);
+    }
+    if (dados.dividendos.length > 0) {
+      const totalDiv = dados.dividendos.reduce((s,x)=>s+x.valor,0);
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td><input value="Dividendos e lucros (${dados.dividendos.length} empresas)"></td>` +
+        `<td><input type="text" inputmode="decimal" value="${fmtInput((totalDiv/12))}" class="rec-val" oninput="recalcOrc()"></td>` +
+        `<td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td>`;
+      recTbody.appendChild(tr);
+    }
+    if (dados.isentos.length > 0) {
+      const totalIs = dados.isentos.reduce((s,x)=>s+x.valor,0);
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td><input value="Rendimentos isentos (CRA/CRI/LCA/Fundos)"></td>` +
+        `<td><input type="text" inputmode="decimal" value="${fmtInput((totalIs/12))}" class="rec-val" oninput="recalcOrc()"></td>` +
+        `<td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td>`;
+      recTbody.appendChild(tr);
+    }
+    recalcOrc();
+  }
+
+  // ── Orçamento: Despesas ─────────────────────────────────
+  const despTbody = document.getElementById('desp-tbody');
+  if (despTbody && dados.pagamentos.length > 0) {
+    for (const p of dados.pagamentos) {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td><input value="${esc(p.desc)}"></td>` +
+        `<td><input type="text" inputmode="decimal" value="${fmtInput((p.valor/12))}" class="desp-val" oninput="recalcOrc()"></td>` +
+        `<td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td>`;
+      despTbody.appendChild(tr);
+    }
+    recalcOrc();
+  }
+
+  document.getElementById('irpf-preview').style.display = 'none';
+  document.getElementById('irpf-status').textContent = '✅ Dados aplicados ao planejador!';
+  recalcAll();
+  showTab('dados');
+  toast('✅ IRPF importado com sucesso!');
+}
+
+function esc(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ══════════════════════════════════════════════════════════
+// SALVAR / CARREGAR
+// ══════════════════════════════════════════════════════════
+function salvarDados() {
+  try {
+    const snap={};
+    const PII=['nome','profissao'];
+    document.querySelectorAll('input[id],select[id]').forEach(el=>{ if(!PII.includes(el.id)) snap[el.id]=el.type==='checkbox'?el.checked:el.value; });
+    localStorage.setItem('superei_planejador',JSON.stringify(snap));
+    toast('💾 Dados salvos!');
+  } catch(e){ toast('Erro ao salvar.'); }
+}
+function carregarDados() {
+  try {
+    const snap=JSON.parse(localStorage.getItem('superei_planejador')||'{}');
+    Object.entries(snap).forEach(([id,val])=>{ const el=document.getElementById(id); if(!el)return; if(el.type==='checkbox')el.checked=val; else el.value=val; });
+  } catch(e){}
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+const TIPS = {
+  nome:'Seu nome completo',
+  idade:'Idade atual em anos — base de todas as projeções',
+  vida:'Expectativa de vida usada nas projeções de longo prazo',
+  civil:'Estado civil — relevante para planejamento sucessório',
+  profissao:'Sua profissão ou área de atuação',
+  suitability:'Perfil de risco — define tolerância a renda variável',
+  inflacao:'Inflação anual estimada (IPCA). Reduz o poder de compra futuro',
+  cdi:'Taxa CDI/Selic anual — referência de rentabilidade da renda fixa',
+  rent_apo:'Rentabilidade nominal esperada na fase de aposentadoria',
+  objetivo:'Objetivo principal do planejamento financeiro',
+  desp_mensal:'Despesa familiar mensal total — base do fundo de emergência',
+  poupanca:'Valor que você investe ou poupa todo mês',
+  reajuste_poupanca:'% de aumento anual do aporte mensal (reajuste salarial, por exemplo)',
+  reajuste_desp:'% de crescimento anual das despesas — geralmente igual à inflação',
+  meta:'Patrimônio financeiro alvo a ser acumulado',
+  prazo_meta:'Prazo em anos para atingir a meta patrimonial',
+  r1:'Rentabilidade nominal anual na fase de acumulação (até aposentadoria)',
+  r2:'Rentabilidade nominal nos primeiros 5 anos de aposentadoria',
+  r3:'Rentabilidade nominal na fase madura (10 anos após aposentadoria)',
+  r4:'Rentabilidade nominal na fase avançada (10 anos)',
+  r5:'Rentabilidade nominal na longevidade (após 85 anos)',
+  idade_apo:'Idade em que planeja se aposentar',
+  renda_apo:'Renda mensal desejada na aposentadoria, em R$ de hoje',
+  inss:'Benefício mensal previsto do INSS ou outra pensão pública',
+  renda_aluguel_apo:'Renda de aluguel esperada durante a aposentadoria',
+  capital_transmitir:'Valor que deseja preservar e deixar como herança',
+  liquidez:'% do patrimônio líquido mantido em ativos de alta liquidez (emergências)',
+  ir:'Considerar IR de 15% sobre resgates na aposentadoria',
+  regra_retirada:'% anual de retirada segura (4% = regra clássica, sustentável por 30+ anos)',
+  prot_imediata:'Capital necessário agora para proteger a família (dívidas + renda futura)',
+  liquidez_suc:'Liquidez para custear inventário, ITCMD e despesas de sucessão',
+  'usar-taxa-variavel':'Ativar rentabilidade diferente por fase de vida ao invés do CDI fixo',
+};
+Object.entries(TIPS).forEach(([id,tip])=>{
+  const el=document.getElementById(id);
+  if(el) el.title=tip;
+});
+
+// ── Formatação BR nos inputs numéricos ────────────────────
+const fmtInput = v => {
+  const n = parseBR(String(v));
+  if (!n && n !== 0) return '';
+  return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+};
+function formatNumInputs(root) {
+  (root||document).querySelectorAll('input[inputmode="decimal"]').forEach(el => {
+    const raw = parseBR(el.value);
+    if (!isNaN(raw) && el.value !== '') el.value = fmtInput(raw);
+  });
+}
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if (el.tagName !== 'INPUT' || el.inputMode !== 'decimal') return;
+  // Remove thousand dots so user edits plain number
+  el.value = el.value.replace(/\./g,'');
+}, true);
+document.addEventListener('focusout', e => {
+  const el = e.target;
+  if (el.tagName !== 'INPUT' || el.inputMode !== 'decimal') return;
+  const raw = parseBR(el.value);
+  el.value = (raw || raw === 0) ? fmtInput(raw) : '';
+}, true);
+
+carregarDados();
+buildFinTable();
+buildImovelTable();
+recalcFin();
+recalcImovel();
+recalcDiv();
+recalcAll();
+formatNumInputs();
+</script>
+</body>
+</html>
