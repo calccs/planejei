@@ -1,9 +1,10 @@
-# Planejador Financeiro Superei
+# Planejei — Planejador Financeiro
 
 Planejador financeiro completo em uma página (HTML + Chart.js), com:
 
 - 9 abas: dados, carteira, projeção, aposentadoria, metas, orçamento, proteção, educação e dívidas
 - Importação da declaração de IRPF (arquivo `.DEC`, layout 2026)
+- **Tela de login** com validação por e-mail e senha (criar conta / entrar / modo local)
 - Salvamento local (localStorage) e **na nuvem** (PostgreSQL via Railway)
 
 ## Estrutura
@@ -21,6 +22,7 @@ api/
 | Tabela | Conteúdo |
 |---|---|
 | `clientes` | e-mail, nome, senha (hash scrypt) |
+| `sessoes` | tokens de login (validade 90 dias) |
 | `perfil_campos` | campos avulsos do formulário (idade, premissas etc.) |
 | `dependentes` | nome, idade, observações |
 | `ativos_financeiros` | descrição, valor, %CDI, taxa fixa, categoria |
@@ -52,12 +54,15 @@ npm start          # http://localhost:3000
 
 Sem `DATABASE_URL`, o servidor funciona normalmente, mas os botões de nuvem retornam erro 503.
 
-## Uso da nuvem
+## Login e nuvem
 
-Botão **☁️ Nuvem** no cabeçalho → informe e-mail e senha:
+Ao abrir o app aparece a **tela de login**:
 
-- Primeiro **Salvar na nuvem** com um e-mail novo **cria a conta** (a senha fica em hash, nunca em texto).
-- Depois, **Carregar** em qualquer máquina restaura tudo: campos, carteira, imóveis, dívidas, orçamento, metas, proteção e educação.
+- **Criar conta**: nome, e-mail e senha (mínimo 6 caracteres; armazenada como hash scrypt). O estado atual do planejador é salvo na conta nova.
+- **Entrar**: valida e-mail/senha e carrega tudo do banco: campos, carteira, imóveis, dívidas, orçamento, metas, proteção e educação.
+- **Continuar sem conta**: modo local, dados ficam só no navegador.
+
+Logado, o botão **💾 Salvar** grava no navegador **e** no banco. A sessão dura 90 dias (auto-login ao reabrir); **Sair** encerra a sessão.
 
 ## Privacidade
 
