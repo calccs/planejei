@@ -6,6 +6,8 @@
 !.gitignore
 !planejador.html
 !README.md
+!package.json
+!package-lock.json
 !api/
 !api/**
 

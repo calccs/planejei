@@ -144,8 +144,21 @@
   </div>
   <div style="display:flex;gap:8px;align-items:center">
     <button class="btn-sm" onclick="salvarDados()">💾 Salvar</button>
+    <button class="btn-sm" onclick="toggleNuvem()">☁️ Nuvem</button>
     <button class="btn-print" onclick="window.print()">🖨️ PDF</button>
   </div>
+</div>
+
+<!-- ── Painel de conta na nuvem (Railway/PostgreSQL) ── -->
+<div id="nuvem-panel" style="display:none;position:fixed;top:56px;right:16px;z-index:1000;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;width:280px;box-shadow:0 8px 24px rgba(0,0,0,.45)">
+  <div style="font-size:12px;font-weight:700;margin-bottom:8px">☁️ Conta na nuvem</div>
+  <input id="nuvem-email" type="email" placeholder="seu@email.com" autocomplete="email" style="width:100%;margin-bottom:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box">
+  <input id="nuvem-senha" type="password" placeholder="senha" autocomplete="current-password" style="width:100%;margin-bottom:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box">
+  <div style="display:flex;gap:6px">
+    <button class="btn-sm" onclick="salvarNuvem()">💾 Salvar na nuvem</button>
+    <button class="btn-sm" onclick="carregarNuvem()">📥 Carregar</button>
+  </div>
+  <div id="nuvem-status" style="font-size:10px;color:var(--text2);margin-top:8px">No primeiro salvamento a senha cria sua conta.</div>
 </div>
 
 <div class="main">
@@ -1494,7 +1507,7 @@ function esc(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').repl
 function salvarDados() {
   try {
     const snap={};
-    const PII=['nome','profissao'];
+    const PII=['nome','profissao','nuvem-email','nuvem-senha'];
     document.querySelectorAll('input[id],select[id]').forEach(el=>{ if(!PII.includes(el.id)) snap[el.id]=el.type==='checkbox'?el.checked:el.value; });
     localStorage.setItem('superei_planejador',JSON.stringify(snap));
     toast('💾 Dados salvos!');
@@ -1505,6 +1518,98 @@ function carregarDados() {
     const snap=JSON.parse(localStorage.getItem('superei_planejador')||'{}');
     Object.entries(snap).forEach(([id,val])=>{ const el=document.getElementById(id); if(!el)return; if(el.type==='checkbox')el.checked=val; else el.value=val; });
   } catch(e){}
+}
+
+// ══════════════════════════════════════════════════════════
+// NUVEM (API Express + PostgreSQL no Railway)
+// ══════════════════════════════════════════════════════════
+const NUVEM_TBODY = {dep:'dep-tbody',fin:'fin-tbody',imovel:'imovel-tbody',metas:'metas-tbody',rec:'rec-tbody',desp:'desp-tbody',proj:'proj-tbody',recfut:'receitas-fut-tbody',div:'div-tbody',edu:'edu-tbody'};
+const NUVEM_ADDFN = {dep:'addDep',fin:'addFin',imovel:'addImovel',metas:'addMeta',rec:'addReceita',desp:'addDespesa',proj:'addProjeto',recfut:'addReceitaFut',div:'addDiv'}; // edu: linhas fixas
+
+function toggleNuvem(){
+  const p=document.getElementById('nuvem-panel');
+  p.style.display = p.style.display==='none' ? 'block' : 'none';
+}
+
+function snapshotCompleto(){
+  const campos={}, SKIP=['nuvem-email','nuvem-senha'];
+  document.querySelectorAll('input[id],select[id]').forEach(el=>{
+    if(SKIP.includes(el.id)) return;
+    campos[el.id]=el.type==='checkbox'?el.checked:el.value;
+  });
+  const tabelas={};
+  for(const [k,id] of Object.entries(NUVEM_TBODY)){
+    const tb=document.getElementById(id); if(!tb) continue;
+    tabelas[k]=[...tb.rows].map(tr=>[...tr.querySelectorAll('input,select')].map(el=>el.value));
+  }
+  return {campos,tabelas};
+}
+
+function aplicarSnapshot(snap){
+  Object.entries(snap.campos||{}).forEach(([id,val])=>{
+    const el=document.getElementById(id); if(!el) return;
+    if(el.type==='checkbox') el.checked=(val===true||val==='true');
+    else el.value=val==null?'':val;
+  });
+  for(const [k,rows] of Object.entries(snap.tabelas||{})){
+    const tb=document.getElementById(NUVEM_TBODY[k]);
+    if(!tb||!Array.isArray(rows)) continue;
+    const addFn=window[NUVEM_ADDFN[k]];
+    if(addFn){
+      tb.innerHTML='';
+      rows.forEach(vals=>{
+        addFn();
+        const tr=tb.rows[tb.rows.length-1];
+        [...tr.querySelectorAll('input,select')].forEach((el,i)=>{ if(vals[i]!=null) el.value=vals[i]; });
+      });
+    } else {
+      rows.forEach((vals,ri)=>{
+        const tr=tb.rows[ri]; if(!tr) return;
+        [...tr.querySelectorAll('input,select')].forEach((el,i)=>{ if(vals[i]!=null) el.value=vals[i]; });
+      });
+    }
+  }
+  formatNumInputs();
+  recalcFin(); recalcImovel(); recalcDiv(); recalcAll();
+}
+
+function nuvemCredenciais(){
+  const email=document.getElementById('nuvem-email').value.trim().toLowerCase();
+  const senha=document.getElementById('nuvem-senha').value;
+  const st=document.getElementById('nuvem-status');
+  if(location.protocol==='file:'){ st.textContent='⚠️ Abra pelo endereço do servidor (Railway ou http://localhost:3000) para usar a nuvem.'; return null; }
+  if(!email||!senha){ st.textContent='Informe e-mail e senha.'; return null; }
+  return {email,senha,st};
+}
+
+async function salvarNuvem(){
+  const cred=nuvemCredenciais(); if(!cred) return;
+  const {email,senha,st}=cred;
+  st.textContent='Salvando…';
+  try{
+    const snap=snapshotCompleto();
+    const r=await fetch('/api/salvar',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,senha,nome:document.getElementById('nome')?.value||'',...snap})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.erro||'Falha ao salvar ('+r.status+')');
+    st.textContent='✅ Salvo na nuvem às '+new Date().toLocaleTimeString('pt-BR');
+    toast('☁️ Dados salvos na nuvem!');
+  }catch(e){ st.textContent='❌ '+e.message; }
+}
+
+async function carregarNuvem(){
+  const cred=nuvemCredenciais(); if(!cred) return;
+  const {email,senha,st}=cred;
+  st.textContent='Carregando…';
+  try{
+    const r=await fetch('/api/carregar',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,senha})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.erro||'Falha ao carregar ('+r.status+')');
+    aplicarSnapshot(j);
+    st.textContent='✅ Dados carregados da nuvem.';
+    toast('📥 Dados carregados da nuvem!');
+  }catch(e){ st.textContent='❌ '+e.message; }
 }
 
 // ══════════════════════════════════════════════════════════
