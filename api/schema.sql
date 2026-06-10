@@ -12,6 +12,13 @@ CREATE TABLE IF NOT EXISTS clientes (
   atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Sessões de login (token aleatório devolvido ao navegador)
+CREATE TABLE IF NOT EXISTS sessoes (
+  token      TEXT PRIMARY KEY,
+  cliente_id INT NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  criado_em  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Campos avulsos do formulário (idade, premissas, aposentadoria etc.)
 CREATE TABLE IF NOT EXISTS perfil_campos (
   cliente_id INT  NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,

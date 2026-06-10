@@ -63,33 +63,98 @@ app.get('/api/health', async (_req, res) => {
   res.json({ ok: true, db });
 });
 
-// ── Salvar: cria conta no primeiro uso; depois exige a mesma senha
+// ── Sessões ────────────────────────────────────────────────
+const novoToken = () => crypto.randomBytes(32).toString('hex');
+
+// Devolve {id, email, nome} do cliente dono do token, ou null
+async function clientePorToken(token) {
+  if (!token) return null;
+  const { rows } = await pool.query(
+    `SELECT c.id, c.email, c.nome FROM sessoes s
+       JOIN clientes c ON c.id = s.cliente_id
+      WHERE s.token = $1 AND s.criado_em > now() - interval '90 days'`, [token]);
+  return rows[0] || null;
+}
+
+// ── Criar conta ────────────────────────────────────────────
+app.post('/api/registrar', async (req, res) => {
+  if (!pool) return res.status(503).json({ erro: 'Banco de dados não configurado (DATABASE_URL ausente)' });
+  let { email, senha, nome } = req.body || {};
+  email = String(email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email))
+    return res.status(400).json({ erro: 'E-mail inválido' });
+  if (!senha || String(senha).length < 6)
+    return res.status(400).json({ erro: 'A senha precisa ter pelo menos 6 caracteres' });
+  try {
+    const existe = await pool.query('SELECT 1 FROM clientes WHERE email=$1', [email]);
+    if (existe.rows.length > 0)
+      return res.status(409).json({ erro: 'E-mail já cadastrado — use Entrar' });
+    const hash = await hashSenha(String(senha));
+    const { rows } = await pool.query(
+      'INSERT INTO clientes (email, nome, senha_hash) VALUES ($1,$2,$3) RETURNING id',
+      [email, nome || null, hash]);
+    const token = novoToken();
+    await pool.query('INSERT INTO sessoes (token, cliente_id) VALUES ($1,$2)', [token, rows[0].id]);
+    res.json({ token, email, nome: nome || '' });
+  } catch (e) {
+    console.error('Erro em /api/registrar:', e);
+    res.status(500).json({ erro: 'Erro interno ao registrar' });
+  }
+});
+
+// ── Entrar ─────────────────────────────────────────────────
+app.post('/api/login', async (req, res) => {
+  if (!pool) return res.status(503).json({ erro: 'Banco de dados não configurado (DATABASE_URL ausente)' });
+  let { email, senha } = req.body || {};
+  email = String(email || '').trim().toLowerCase();
+  if (!email || !senha) return res.status(400).json({ erro: 'Informe e-mail e senha' });
+  try {
+    const { rows } = await pool.query('SELECT id, nome, senha_hash FROM clientes WHERE email=$1', [email]);
+    if (rows.length === 0) return res.status(404).json({ erro: 'E-mail não cadastrado — crie uma conta' });
+    if (!(await verificaSenha(String(senha), rows[0].senha_hash)))
+      return res.status(401).json({ erro: 'Senha incorreta' });
+    const token = novoToken();
+    await pool.query('INSERT INTO sessoes (token, cliente_id) VALUES ($1,$2)', [token, rows[0].id]);
+    res.json({ token, email, nome: rows[0].nome || '' });
+  } catch (e) {
+    console.error('Erro em /api/login:', e);
+    res.status(500).json({ erro: 'Erro interno ao entrar' });
+  }
+});
+
+// ── Validar sessão existente (auto-login ao reabrir) ───────
+app.post('/api/sessao', async (req, res) => {
+  if (!pool) return res.status(503).json({ erro: 'Banco de dados não configurado (DATABASE_URL ausente)' });
+  try {
+    const cli = await clientePorToken((req.body || {}).token);
+    if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
+    res.json({ email: cli.email, nome: cli.nome || '' });
+  } catch (e) {
+    console.error('Erro em /api/sessao:', e);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+});
+
+// ── Sair ───────────────────────────────────────────────────
+app.post('/api/logout', async (req, res) => {
+  if (!pool) return res.json({ ok: true });
+  try { await pool.query('DELETE FROM sessoes WHERE token=$1', [String((req.body || {}).token || '')]); } catch {}
+  res.json({ ok: true });
+});
+
+// ── Salvar dados do planejador (requer sessão) ─────────────
 app.post('/api/salvar', async (req, res) => {
   if (!pool) return res.status(503).json({ erro: 'Banco de dados não configurado (DATABASE_URL ausente)' });
-  let { email, senha, nome, campos = {}, tabelas = {} } = req.body || {};
-  email = String(email || '').trim().toLowerCase();
-  if (!email || !senha) return res.status(400).json({ erro: 'E-mail e senha são obrigatórios' });
+  const { token, nome, campos = {}, tabelas = {} } = req.body || {};
+  const cli = await clientePorToken(token).catch(() => null);
+  if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
+  const clienteId = cli.id;
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    let r = await client.query('SELECT id, senha_hash FROM clientes WHERE email=$1', [email]);
-    let clienteId;
-    if (r.rows.length === 0) {
-      const hash = await hashSenha(senha);
-      r = await client.query(
-        'INSERT INTO clientes (email, nome, senha_hash) VALUES ($1,$2,$3) RETURNING id',
-        [email, nome || null, hash]);
-      clienteId = r.rows[0].id;
-    } else {
-      if (!(await verificaSenha(senha, r.rows[0].senha_hash))) {
-        await client.query('ROLLBACK');
-        return res.status(401).json({ erro: 'Senha incorreta para este e-mail' });
-      }
-      clienteId = r.rows[0].id;
-      await client.query('UPDATE clientes SET nome=$2, atualizado_em=now() WHERE id=$1',
-        [clienteId, nome || null]);
-    }
+    await client.query('UPDATE clientes SET nome=COALESCE($2,nome), atualizado_em=now() WHERE id=$1',
+      [clienteId, nome || null]);
 
     await client.query('DELETE FROM perfil_campos WHERE cliente_id=$1', [clienteId]);
     for (const [campo, valor] of Object.entries(campos))
@@ -120,20 +185,14 @@ app.post('/api/salvar', async (req, res) => {
   }
 });
 
-// ── Carregar: devolve o snapshot completo do cliente
+// ── Carregar: devolve o snapshot completo do cliente (requer sessão)
 app.post('/api/carregar', async (req, res) => {
   if (!pool) return res.status(503).json({ erro: 'Banco de dados não configurado (DATABASE_URL ausente)' });
-  let { email, senha } = req.body || {};
-  email = String(email || '').trim().toLowerCase();
-  if (!email || !senha) return res.status(400).json({ erro: 'E-mail e senha são obrigatórios' });
+  const cli = await clientePorToken((req.body || {}).token).catch(() => null);
+  if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
+  const clienteId = cli.id;
 
   try {
-    const r = await pool.query('SELECT id, senha_hash FROM clientes WHERE email=$1', [email]);
-    if (r.rows.length === 0) return res.status(404).json({ erro: 'E-mail não cadastrado' });
-    if (!(await verificaSenha(senha, r.rows[0].senha_hash)))
-      return res.status(401).json({ erro: 'Senha incorreta para este e-mail' });
-    const clienteId = r.rows[0].id;
-
     const campos = {};
     (await pool.query('SELECT campo, valor FROM perfil_campos WHERE cliente_id=$1', [clienteId]))
       .rows.forEach(({ campo, valor }) =>

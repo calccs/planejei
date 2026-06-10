@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Superei — Planejador Financeiro</title>
+<title>Planejei — Planejador Financeiro</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
@@ -139,26 +139,48 @@
 
 <div class="header">
   <div style="display:flex;align-items:center;gap:10px">
-    <div class="logo">superei</div>
+    <div class="logo">planejei</div>
     <div class="badge-h">Planejador Financeiro</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
+    <span id="usuario-info" style="display:none;font-size:11px;color:var(--text2)"></span>
     <button class="btn-sm" onclick="salvarDados()">💾 Salvar</button>
-    <button class="btn-sm" onclick="toggleNuvem()">☁️ Nuvem</button>
     <button class="btn-print" onclick="window.print()">🖨️ PDF</button>
+    <button id="btn-sair" class="btn-sm" onclick="sairConta()" style="display:none">Sair</button>
   </div>
 </div>
 
-<!-- ── Painel de conta na nuvem (Railway/PostgreSQL) ── -->
-<div id="nuvem-panel" style="display:none;position:fixed;top:56px;right:16px;z-index:1000;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;width:280px;box-shadow:0 8px 24px rgba(0,0,0,.45)">
-  <div style="font-size:12px;font-weight:700;margin-bottom:8px">☁️ Conta na nuvem</div>
-  <input id="nuvem-email" type="email" placeholder="seu@email.com" autocomplete="email" style="width:100%;margin-bottom:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box">
-  <input id="nuvem-senha" type="password" placeholder="senha" autocomplete="current-password" style="width:100%;margin-bottom:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box">
-  <div style="display:flex;gap:6px">
-    <button class="btn-sm" onclick="salvarNuvem()">💾 Salvar na nuvem</button>
-    <button class="btn-sm" onclick="carregarNuvem()">📥 Carregar</button>
+<!-- ═══════════════════ TELA DE LOGIN ═══════════════════ -->
+<div id="login-screen" style="position:fixed;inset:0;z-index:2000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px 28px;box-shadow:0 12px 40px rgba(0,0,0,.5)">
+    <div class="logo" style="font-size:34px;text-align:center;margin-bottom:4px">planejei</div>
+    <div style="text-align:center;font-size:12px;color:var(--text2);margin-bottom:24px">Planejador Financeiro</div>
+
+    <div id="login-campo-nome" style="display:none;margin-bottom:10px">
+      <input id="login-nome" placeholder="Seu nome completo" autocomplete="name"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
+    </div>
+    <input id="login-email" type="email" placeholder="seu@email.com" autocomplete="email"
+      style="width:100%;margin-bottom:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
+    <input id="login-senha" type="password" placeholder="Senha" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')fazerLogin()"
+      style="width:100%;margin-bottom:14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
+
+    <button id="login-btn" onclick="fazerLogin()"
+      style="width:100%;background:linear-gradient(90deg,#6c63ff,#43e97b);color:#000;border:none;padding:12px;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px;font-family:inherit">
+      Entrar
+    </button>
+
+    <div id="login-erro" style="display:none;margin-top:12px;font-size:11px;color:var(--red);text-align:center"></div>
+
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text2)">
+      <span id="login-alternar-txt">Ainda não tem conta?</span>
+      <a id="login-alternar" onclick="alternarModoLogin()" style="color:var(--accent);cursor:pointer;font-weight:600">Criar conta</a>
+    </div>
+    <div style="text-align:center;margin-top:10px">
+      <a onclick="entrarModoLocal()" style="font-size:10px;color:var(--text2);cursor:pointer;text-decoration:underline">Continuar sem conta (dados ficam só neste navegador)</a>
+    </div>
   </div>
-  <div id="nuvem-status" style="font-size:10px;color:var(--text2);margin-top:8px">No primeiro salvamento a senha cria sua conta.</div>
 </div>
 
 <div class="main">
@@ -1507,15 +1529,16 @@ function esc(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').repl
 function salvarDados() {
   try {
     const snap={};
-    const PII=['nome','profissao','nuvem-email','nuvem-senha'];
+    const PII=['nome','profissao','login-email','login-senha','login-nome'];
     document.querySelectorAll('input[id],select[id]').forEach(el=>{ if(!PII.includes(el.id)) snap[el.id]=el.type==='checkbox'?el.checked:el.value; });
-    localStorage.setItem('superei_planejador',JSON.stringify(snap));
-    toast('💾 Dados salvos!');
+    localStorage.setItem('planejei_planejador',JSON.stringify(snap));
+    if (sessaoToken) salvarNuvem();   // logado → também grava no banco
+    else toast('💾 Dados salvos neste navegador!');
   } catch(e){ toast('Erro ao salvar.'); }
 }
 function carregarDados() {
   try {
-    const snap=JSON.parse(localStorage.getItem('superei_planejador')||'{}');
+    const snap=JSON.parse(localStorage.getItem('planejei_planejador')||localStorage.getItem('superei_planejador')||'{}');
     Object.entries(snap).forEach(([id,val])=>{ const el=document.getElementById(id); if(!el)return; if(el.type==='checkbox')el.checked=val; else el.value=val; });
   } catch(e){}
 }
@@ -1526,13 +1549,8 @@ function carregarDados() {
 const NUVEM_TBODY = {dep:'dep-tbody',fin:'fin-tbody',imovel:'imovel-tbody',metas:'metas-tbody',rec:'rec-tbody',desp:'desp-tbody',proj:'proj-tbody',recfut:'receitas-fut-tbody',div:'div-tbody',edu:'edu-tbody'};
 const NUVEM_ADDFN = {dep:'addDep',fin:'addFin',imovel:'addImovel',metas:'addMeta',rec:'addReceita',desp:'addDespesa',proj:'addProjeto',recfut:'addReceitaFut',div:'addDiv'}; // edu: linhas fixas
 
-function toggleNuvem(){
-  const p=document.getElementById('nuvem-panel');
-  p.style.display = p.style.display==='none' ? 'block' : 'none';
-}
-
 function snapshotCompleto(){
-  const campos={}, SKIP=['nuvem-email','nuvem-senha'];
+  const campos={}, SKIP=['login-email','login-senha','login-nome'];
   document.querySelectorAll('input[id],select[id]').forEach(el=>{
     if(SKIP.includes(el.id)) return;
     campos[el.id]=el.type==='checkbox'?el.checked:el.value;
@@ -1573,43 +1591,117 @@ function aplicarSnapshot(snap){
   recalcFin(); recalcImovel(); recalcDiv(); recalcAll();
 }
 
-function nuvemCredenciais(){
-  const email=document.getElementById('nuvem-email').value.trim().toLowerCase();
-  const senha=document.getElementById('nuvem-senha').value;
-  const st=document.getElementById('nuvem-status');
-  if(location.protocol==='file:'){ st.textContent='⚠️ Abra pelo endereço do servidor (Railway ou http://localhost:3000) para usar a nuvem.'; return null; }
-  if(!email||!senha){ st.textContent='Informe e-mail e senha.'; return null; }
-  return {email,senha,st};
+// ══════════════════════════════════════════════════════════
+// LOGIN / SESSÃO
+// ══════════════════════════════════════════════════════════
+let sessaoToken = localStorage.getItem('planejei_token') || '';
+let sessaoEmail = localStorage.getItem('planejei_email') || '';
+let loginModo = 'entrar'; // 'entrar' | 'cadastrar'
+
+const apiJSON = (rota,body) => fetch(rota,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+  .then(async r=>{ const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.erro||'Falha ('+r.status+')'); return j; });
+
+function loginErro(msg){
+  const el=document.getElementById('login-erro');
+  el.textContent=msg; el.style.display=msg?'block':'none';
 }
 
-async function salvarNuvem(){
-  const cred=nuvemCredenciais(); if(!cred) return;
-  const {email,senha,st}=cred;
-  st.textContent='Salvando…';
+function alternarModoLogin(){
+  loginModo = loginModo==='entrar' ? 'cadastrar' : 'entrar';
+  const cadastro = loginModo==='cadastrar';
+  document.getElementById('login-campo-nome').style.display = cadastro?'block':'none';
+  document.getElementById('login-btn').textContent = cadastro?'Criar conta':'Entrar';
+  document.getElementById('login-alternar-txt').textContent = cadastro?'Já tem conta?':'Ainda não tem conta?';
+  document.getElementById('login-alternar').textContent = cadastro?'Entrar':'Criar conta';
+  document.getElementById('login-senha').autocomplete = cadastro?'new-password':'current-password';
+  loginErro('');
+}
+
+async function fazerLogin(){
+  const email=document.getElementById('login-email').value.trim().toLowerCase();
+  const senha=document.getElementById('login-senha').value;
+  const nome =document.getElementById('login-nome').value.trim();
+  if(!email||!senha){ loginErro('Informe e-mail e senha.'); return; }
+  if(loginModo==='cadastrar'&&senha.length<6){ loginErro('A senha precisa ter pelo menos 6 caracteres.'); return; }
+  loginErro('');
+  const btn=document.getElementById('login-btn');
+  btn.disabled=true; btn.textContent='Aguarde…';
+  try{
+    const rota = loginModo==='cadastrar' ? '/api/registrar' : '/api/login';
+    const j = await apiJSON(rota,{email,senha,nome});
+    sessaoToken=j.token; sessaoEmail=j.email;
+    localStorage.setItem('planejei_token',sessaoToken);
+    localStorage.setItem('planejei_email',sessaoEmail);
+    if(loginModo==='cadastrar'){
+      if(nome) document.getElementById('nome').value=nome;
+      await salvarNuvem(true);            // grava o estado atual na conta nova
+    } else {
+      const dados=await apiJSON('/api/carregar',{token:sessaoToken});
+      aplicarSnapshot(dados);
+    }
+    fecharLogin();
+    toast(loginModo==='cadastrar'?'✅ Conta criada!':'👋 Bem-vindo de volta!');
+  }catch(e){ loginErro('❌ '+e.message); }
+  finally{ btn.disabled=false; btn.textContent=loginModo==='cadastrar'?'Criar conta':'Entrar'; }
+}
+
+function fecharLogin(){
+  document.getElementById('login-screen').style.display='none';
+  const info=document.getElementById('usuario-info'), sair=document.getElementById('btn-sair');
+  if(sessaoToken){ info.textContent=sessaoEmail; info.style.display='inline'; sair.style.display='inline-block'; }
+  else { info.style.display='none'; sair.style.display='none'; }
+}
+
+function entrarModoLocal(){
+  sessaoToken=''; sessaoEmail='';
+  fecharLogin();
+  toast('Modo local: dados salvos só neste navegador.');
+}
+
+async function sairConta(){
+  try{ if(sessaoToken) await apiJSON('/api/logout',{token:sessaoToken}); }catch(e){}
+  localStorage.removeItem('planejei_token');
+  localStorage.removeItem('planejei_email');
+  location.reload();
+}
+
+// Auto-login ao abrir: valida o token salvo e carrega os dados da conta
+async function initLogin(){
+  if(location.protocol==='file:'){      // sem servidor → só modo local
+    document.querySelectorAll('#login-screen a, #login-screen button, #login-screen input').forEach(el=>{
+      if(!el.getAttribute('onclick')?.includes('entrarModoLocal')) el.style.display='none';
+    });
+    document.getElementById('login-erro').textContent='Servidor indisponível (arquivo local). Use o modo local abaixo.';
+    document.getElementById('login-erro').style.display='block';
+    return;
+  }
+  if(!sessaoToken) return;              // mostra a tela de login
+  try{
+    await apiJSON('/api/sessao',{token:sessaoToken});
+    const dados=await apiJSON('/api/carregar',{token:sessaoToken});
+    aplicarSnapshot(dados);
+    fecharLogin();
+  }catch(e){                            // token expirado → login de novo
+    sessaoToken=''; sessaoEmail='';
+    localStorage.removeItem('planejei_token');
+    localStorage.removeItem('planejei_email');
+  }
+}
+
+async function salvarNuvem(silencioso){
+  if(!sessaoToken) return;
   try{
     const snap=snapshotCompleto();
-    const r=await fetch('/api/salvar',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,senha,nome:document.getElementById('nome')?.value||'',...snap})});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(j.erro||'Falha ao salvar ('+r.status+')');
-    st.textContent='✅ Salvo na nuvem às '+new Date().toLocaleTimeString('pt-BR');
-    toast('☁️ Dados salvos na nuvem!');
-  }catch(e){ st.textContent='❌ '+e.message; }
-}
-
-async function carregarNuvem(){
-  const cred=nuvemCredenciais(); if(!cred) return;
-  const {email,senha,st}=cred;
-  st.textContent='Carregando…';
-  try{
-    const r=await fetch('/api/carregar',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,senha})});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(j.erro||'Falha ao carregar ('+r.status+')');
-    aplicarSnapshot(j);
-    st.textContent='✅ Dados carregados da nuvem.';
-    toast('📥 Dados carregados da nuvem!');
-  }catch(e){ st.textContent='❌ '+e.message; }
+    await apiJSON('/api/salvar',{token:sessaoToken,nome:document.getElementById('nome')?.value||'',...snap});
+    if(!silencioso) toast('☁️ Salvo na nuvem!');
+  }catch(e){
+    toast('⚠️ Nuvem: '+e.message);
+    if(/Sessão expirada/i.test(e.message)){
+      localStorage.removeItem('planejei_token');
+      sessaoToken='';
+      document.getElementById('login-screen').style.display='flex';
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1687,6 +1779,7 @@ recalcImovel();
 recalcDiv();
 recalcAll();
 formatNumInputs();
+initLogin();
 </script>
 </body>
 </html>
