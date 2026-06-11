@@ -186,12 +186,12 @@
     <button class="tab active" onclick="showTab('dados')">👤 Dados</button>
     <button class="tab" onclick="showTab('carteira')">💼 Carteira</button>
     <button class="tab" onclick="showTab('orcamento')">📋 Orçamento</button>
-    <button class="tab" onclick="showTab('aposentadoria')">🏖️ Aposentadoria</button>
-    <button class="tab" onclick="showTab('projecao')">📈 Projeção</button>
-    <button class="tab" onclick="showTab('metas')">🎯 Metas</button>
-    <button class="tab" onclick="showTab('protecao')">🛡️ Proteção</button>
     <button class="tab" onclick="showTab('educacao')">🎓 Educação</button>
     <button class="tab" onclick="showTab('dividas')">💳 Dívidas</button>
+    <button class="tab" onclick="showTab('metas')">🎯 Metas</button>
+    <button class="tab" onclick="showTab('protecao')">🛡️ Proteção</button>
+    <button class="tab" onclick="showTab('aposentadoria')">🏖️ Aposentadoria</button>
+    <button class="tab" onclick="showTab('projecao')">📈 Projeção</button>
   </div>
 
   <!-- ═══════════════════════ DADOS ═══════════════════════════ -->
@@ -662,7 +662,7 @@ function toggleCollapse(id) {
 // ══════════════════════════════════════════════════════════
 // TABS
 // ══════════════════════════════════════════════════════════
-const TABS = ['dados','carteira','orcamento','aposentadoria','projecao','metas','protecao','educacao','dividas'];
+const TABS = ['dados','carteira','orcamento','educacao','dividas','metas','protecao','aposentadoria','projecao'];
 function showTab(id) {
   TABS.forEach(t => document.getElementById('tab-'+t).style.display = t===id?'block':'none');
   document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active', TABS[i]===id));
