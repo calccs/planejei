@@ -70,7 +70,7 @@ const novoToken = () => crypto.randomBytes(32).toString('hex');
 async function clientePorToken(token) {
   if (!token) return null;
   const { rows } = await pool.query(
-    `SELECT c.id, c.email, c.nome FROM sessoes s
+    `SELECT c.id, c.email, c.nome, c.foto FROM sessoes s
        JOIN clientes c ON c.id = s.cliente_id
       WHERE s.token = $1 AND s.criado_em > now() - interval '90 days'`, [token]);
   return rows[0] || null;
@@ -115,7 +115,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ erro: 'Senha incorreta' });
     const token = novoToken();
     await pool.query('INSERT INTO sessoes (token, cliente_id) VALUES ($1,$2)', [token, rows[0].id]);
-    res.json({ token, email, nome: rows[0].nome || '' });
+    res.json({ token, email, nome: rows[0].nome || '', foto: rows[0].foto || '' });
   } catch (e) {
     console.error('Erro em /api/login:', e);
     res.status(500).json({ erro: 'Erro interno ao entrar' });
@@ -128,10 +128,28 @@ app.post('/api/sessao', async (req, res) => {
   try {
     const cli = await clientePorToken((req.body || {}).token);
     if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
-    res.json({ email: cli.email, nome: cli.nome || '' });
+    res.json({ email: cli.email, nome: cli.nome || '', foto: cli.foto || '' });
   } catch (e) {
     console.error('Erro em /api/sessao:', e);
     res.status(500).json({ erro: 'Erro interno' });
+  }
+});
+
+// ── Salvar/remover foto do cliente ─────────────────────────
+app.post('/api/foto/salvar', async (req, res) => {
+  if (!pool) return res.status(503).json({ erro: 'Banco não configurado' });
+  const { token, foto } = req.body || {};
+  const cli = await clientePorToken(token).catch(() => null);
+  if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
+  // foto = data URL JPEG ou null para remover
+  if (foto && !foto.startsWith('data:image/')) return res.status(400).json({ erro: 'Formato inválido' });
+  if (foto && foto.length > 300000) return res.status(400).json({ erro: 'Imagem muito grande (máx ~220 KB)' });
+  try {
+    await pool.query('UPDATE clientes SET foto=$1, atualizado_em=now() WHERE id=$2', [foto || null, cli.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Erro em /api/foto/salvar:', e);
+    res.status(500).json({ erro: 'Erro interno ao salvar foto' });
   }
 });
 

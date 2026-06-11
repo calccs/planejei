@@ -192,7 +192,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS perfil_campos_plan_campo
   ON perfil_campos(planejamento_id, campo)
   WHERE planejamento_id IS NOT NULL;
 
--- 5. Permitir cliente_id nulo nas tabelas de dados
+-- 5. Foto do cliente (JPEG base64 comprimido ~250×250, ≤50KB)
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS foto TEXT;
+
+-- 6. Permitir cliente_id nulo nas tabelas de dados
 --    (dados agora são escopados por planejamento_id; cliente_id era a chave antiga)
 ALTER TABLE perfil_campos      ALTER COLUMN cliente_id DROP NOT NULL;
 ALTER TABLE dependentes        ALTER COLUMN cliente_id DROP NOT NULL;
