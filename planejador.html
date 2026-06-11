@@ -613,7 +613,12 @@ const g    = id => parseBR(document.getElementById(id)?.value);
 const gc   = id => document.getElementById(id)?.checked;
 
 function getTaxaParaIdade(idade, idadeApo) {
-  if (!gc('usar-taxa-variavel')) return g('cdi')/100;
+  if (!gc('usar-taxa-variavel')) {
+    // Rentabilidade ponderada da carteira (média dos %CDI pesada pelo valor).
+    // CDI cheio só como fallback se a carteira estiver vazia/zerada.
+    const r = getRentPonderada();
+    return r > 0 ? r : g('cdi')/100;
+  }
   if (idade < idadeApo) return g('r1')/100;
   const d = idade - idadeApo;
   if (d < 5)  return g('r2')/100;
@@ -852,17 +857,17 @@ function recalcProjecao() {
   scenarioData=[s1,s2,s3];
 
   // Taxa efetivamente usada na projeção (consistente com buildSerie)
-  const taxaProj = gc('usar-taxa-variavel') ? g('r1')/100 : cdi;
+  const taxaProj = getTaxaParaIdade(idadeAt, idadeApo);
   const rent=taxaProj, rentReal=(1+taxaProj)/(1+infl)-1;
   const meta=g('meta'), nPr=g('prazo_meta');
   let pmtNec=0;
-  if(nPr>0&&cdi>0) pmtNec=Math.max(0,(meta-pv*Math.pow(1+cdi,nPr))/((Math.pow(1+cdi,nPr)-1)/cdi)/12);
+  if(nPr>0&&taxaProj>0) pmtNec=Math.max(0,(meta-pv*Math.pow(1+taxaProj,nPr))/((Math.pow(1+taxaProj,nPr)-1)/taxaProj)/12);
 
   const rr=g('regra_retirada')/100||0.04;
   const metaRegra=g('renda_apo')*12/rr;
   const atApo=[s1,s2,s3].map(s=>{ const f=s.find(p=>p.age===idadeApo); return f?f.val:s[s.length-1].val; });
 
-  document.getElementById('pmt-result').innerHTML=`<div class="kpi" style="margin:0"><div class="kpi-val gold">${brl0(pmtNec)}/mês</div><div class="kpi-label">Poupança necessária para a meta</div><div class="kpi-sub">Em ${nPr} anos com CDI ${(cdi*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</div></div>`;
+  document.getElementById('pmt-result').innerHTML=`<div class="kpi" style="margin:0"><div class="kpi-val gold">${brl0(pmtNec)}/mês</div><div class="kpi-label">Poupança necessária para a meta</div><div class="kpi-sub">Em ${nPr} anos com rentabilidade de ${(taxaProj*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}% a.a. (carteira atual)</div></div>`;
 
   document.getElementById('scenarios-cards').innerHTML=[
     {title:'Cenário 1 — Atual',pmt:pmt1,fv:s1[s1.length-1]?.val,atApo:atApo[0],active:false},
