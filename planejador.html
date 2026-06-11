@@ -439,21 +439,6 @@
   <div id="tab-orcamento" style="display:none">
     <div class="section">
       <div class="section-title">Orçamento Mensal</div>
-      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="mes-btns">
-        <button class="btn-sm active" onclick="selMes(this)">JAN</button>
-        <button class="btn-sm" onclick="selMes(this)">FEV</button>
-        <button class="btn-sm" onclick="selMes(this)">MAR</button>
-        <button class="btn-sm" onclick="selMes(this)">ABR</button>
-        <button class="btn-sm" onclick="selMes(this)">MAI</button>
-        <button class="btn-sm" onclick="selMes(this)">JUN</button>
-        <button class="btn-sm" onclick="selMes(this)">JUL</button>
-        <button class="btn-sm" onclick="selMes(this)">AGO</button>
-        <button class="btn-sm" onclick="selMes(this)">SET</button>
-        <button class="btn-sm" onclick="selMes(this)">OUT</button>
-        <button class="btn-sm" onclick="selMes(this)">NOV</button>
-        <button class="btn-sm" onclick="selMes(this)">DEZ</button>
-      </div>
-
       <div class="grid2" style="margin-bottom:14px">
         <div>
           <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--green)">🟢 ENTRADA DE RECURSOS</div>
@@ -1018,11 +1003,6 @@ function recalcMetas() {
 // ══════════════════════════════════════════════════════════
 // ORÇAMENTO
 // ══════════════════════════════════════════════════════════
-function selMes(btn) {
-  document.querySelectorAll('#mes-btns .btn-sm').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
 function recalcOrc() {
   let rec=0,desp=0;
   document.querySelectorAll('.rec-val').forEach(i=>{ rec+=parseBR(i.value)||0; });
