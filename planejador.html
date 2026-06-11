@@ -407,11 +407,9 @@
     <div class="section">
       <div class="section-title">Cenários de Projeção Patrimonial</div>
 
-      <div class="grid3" style="margin-bottom:14px">
-        <div class="field"><label>Rentabilidade anual da projeção (% a.a.)</label><input id="rent_proj" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"></div>
-        <div style="grid-column:span 2;display:flex;align-items:center;font-size:11px;color:var(--text2)">
-          Informe a taxa nominal que deseja usar nas projeções. Com <strong>&nbsp;0&nbsp;</strong> o planejador usa automaticamente a rentabilidade ponderada da carteira. A taxa variável por fase (abaixo), quando ativada, tem prioridade.
-        </div>
+      <div class="field" style="margin-bottom:14px;max-width:280px">
+        <label>Rentabilidade anual da projeção (% a.a.)</label>
+        <input id="rent_proj" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()">
       </div>
 
       <div class="collapsible-header" onclick="toggleCollapse('taxa-brackets')">
@@ -431,6 +429,9 @@
           <div class="toggle-row" style="margin-top:10px">
             <label class="switch"><input type="checkbox" id="usar-taxa-variavel" onchange="recalcProjecao()"><span class="slider"></span></label>
             <span class="toggle-label">Usar taxa variável por fase (tem prioridade sobre a rentabilidade anual informada acima)</span>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--text2);line-height:1.6">
+            Com rentabilidade <strong>0</strong>, o planejador usa automaticamente a rentabilidade ponderada da carteira de investimentos. A taxa variável por fase, quando ativada, tem prioridade sobre qualquer valor informado.
           </div>
         </div>
       </div>
