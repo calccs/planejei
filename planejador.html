@@ -1251,16 +1251,21 @@ function parseDEC(texto) {
       const grupo  = l.substring(13,15);
       const codigo = l.substring(15,17);
       const disc   = l.substring(19,519).replace(/\s+/g,' ').trim();
+      // Grupo do novo formato IRPF (cols 1100-1101): 01=Imóveis, 02=Bens Móveis,
+      // 03=Participações, 04=Aplicações, 06=Depósitos, 07=Fundos, 08=Cripto, 99=Outros
+      const grupoNovo = l.length > 1102 ? l.substring(1100,1102) : '';
       const m = l.match(/(?<!\d)(\d{13})(\d{13})(?!\d)/);
       if (m) {
         const v2024=parseInt(m[1])/100, v2025=parseInt(m[2])/100;
         const valor=v2025>0?v2025:v2024;
         if (valor>0) {
-          const cat  = LABEL_GRUPO[grupo]||'Outro';
           const desc = disc.length>60?disc.substring(0,57)+'...':disc;
-          // Só grupos 11-19 são imóveis; o restante (inclusive grupo 99) é financeiro
-          (GRP_IMOVEL.has(grupo)?res.imoveis:res.ativos).push({
-            grupo, codigo, cat:GRP_IMOVEL.has(grupo)?'Imóvel':cat, desc, v2024, v2025, valor
+          // Imóveis: legado 11-19 ou grupo novo 01. Bens móveis (veículos etc.): grupo novo 02.
+          const isImovel = GRP_IMOVEL.has(grupo) || grupoNovo === '01';
+          const isBemMovel = grupoNovo === '02';
+          const cat = isImovel ? 'Imóvel' : isBemMovel ? 'Bem Móvel' : (LABEL_GRUPO[grupo]||'Outro');
+          ((isImovel || isBemMovel) ? res.imoveis : res.ativos).push({
+            grupo, codigo, cat, desc, v2024, v2025, valor
           });
         }
       }
