@@ -791,10 +791,12 @@ function recalcAll() {
     const despMensal = [...document.querySelectorAll('.desp-val')].reduce((s,i)=>s+(parseBR(i.value)||0),0)
                        || g('desp_mensal');
 
-    // Parcelas mensais de dívidas (recalcula do div-tbody para evitar depender de textContent)
+    // Parcelas mensais de dívidas (usa a parcela manual quando o usuário a editou)
     let totPmtDiv = 0;
     document.querySelectorAll('#div-tbody tr').forEach(tr=>{
       const inp=tr.querySelectorAll('input');
+      const pc=tr.querySelector('input.div-pmt');
+      if(pc&&pc.dataset.manual==='1'&&(parseBR(pc.value)||0)>0){ totPmtDiv+=parseBR(pc.value); return; }
       const sd=parseBR(inp[1]?.value)||0, an=parseBR(inp[2]?.value)||1, tx=parseBR(inp[3]?.value)||10;
       const im=tx/100/12, n=an*12;
       totPmtDiv += im>0 ? sd*im/(1-Math.pow(1+im,-n)) : sd/n;
@@ -1092,8 +1094,14 @@ function recalcDiv() {
     const inp=tr.querySelectorAll('input');
     const s=parseBR(inp[1]?.value)||0,anos=parseBR(inp[2]?.value)||1,taxa=parseBR(inp[3]?.value)||10;
     const im=taxa/100/12,n=anos*12;
-    const pmt=im>0?s*im/(1-Math.pow(1+im,-n)):s/n;
-    const pc=tr.querySelector('.div-pmt'); if(pc)pc.textContent=brl0(pmt)+'/mês';
+    const calc=im>0?s*im/(1-Math.pow(1+im,-n)):s/n;
+    const pc=tr.querySelector('input.div-pmt');
+    let pmt=calc;
+    if(pc){
+      const v=parseBR(pc.value)||0;
+      if(pc.dataset.manual==='1'&&v>0) pmt=v;                 // parcela informada pelo usuário
+      else if(document.activeElement!==pc){ pc.value=fmtInput(calc); delete pc.dataset.manual; }
+    }
     totS+=s;totPmt+=pmt;
   });
   const elT=document.getElementById('div-total'); if(elT)elT.textContent=brl0(totS);
@@ -1120,7 +1128,7 @@ function addReceita(){const tr=document.createElement('tr');tr.innerHTML=`<td><i
 function addDespesa(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td>`;document.getElementById('desp-tbody').appendChild(tr);recalcOrc();}
 function addProjeto(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>F</option><option>P</option></select></td><td><input type="text" inputmode="decimal" value="0" style="width:110px" oninput="recalcProt()"></td><td><input type="text" inputmode="decimal" value="5" style="width:60px" oninput="recalcProt()"></td><td class="proj-pmt" style="color:var(--accent);font-weight:700">—</td><td><button class="btn-del" onclick="delRow(this);recalcProt()">✕</button></td>`;document.getElementById('proj-tbody').appendChild(tr);recalcProt();}
 function addReceitaFut(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" style="width:110px"></td><td><input value=""></td><td><button class="btn-del" onclick="delRow(this)">✕</button></td>`;document.getElementById('receitas-fut-tbody').appendChild(tr);}
-function addDiv(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" style="width:110px" oninput="recalcDiv()"></td><td><input type="text" inputmode="decimal" value="1" style="width:55px" oninput="recalcDiv()"></td><td><input type="text" inputmode="decimal" step="0.1" value="12" style="width:60px" oninput="recalcDiv()"></td><td class="div-pmt" style="color:var(--red);font-weight:700">—</td><td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>SIM</option><option>NÃO</option></select></td><td><button class="btn-del" onclick="delRow(this);recalcDiv()">✕</button></td>`;document.getElementById('div-tbody').appendChild(tr);recalcDiv();}
+function addDiv(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" style="width:110px" oninput="recalcDiv()"></td><td><input type="text" inputmode="decimal" value="1" style="width:55px" oninput="recalcDiv()"></td><td><input type="text" inputmode="decimal" step="0.1" value="12" style="width:60px" oninput="recalcDiv()"></td><td><input type="text" inputmode="decimal" class="div-pmt" value="" title="Calculada automaticamente (Price). Edite para usar a parcela real; apague para voltar ao automático." oninput="this.dataset.manual=this.value.trim()?'1':'';recalcDiv()" onblur="recalcDiv()" style="width:90px;color:var(--red);font-weight:700"></td><td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>SIM</option><option>NÃO</option></select></td><td><button class="btn-del" onclick="delRow(this);recalcDiv()">✕</button></td>`;document.getElementById('div-tbody').appendChild(tr);recalcDiv();}
 function delRow(btn){btn.closest('tr').remove();}
 
 // ══════════════════════════════════════════════════════════
@@ -1467,7 +1475,7 @@ function aplicarDEC(dados) {
       `<td><input type="text" inputmode="decimal" value="${fmtInput(d.saldo)}" style="width:110px" oninput="recalcDiv()"></td>` +
       `<td><input type="text" inputmode="decimal" value="30" style="width:55px" oninput="recalcDiv()"></td>` +
       `<td><input type="text" inputmode="decimal" step="0.1" value="9,00" style="width:60px" oninput="recalcDiv()"></td>` +
-      `<td class="div-pmt" style="color:var(--red);font-weight:700">—</td>` +
+      `<td><input type="text" inputmode="decimal" class="div-pmt" value="" title="Calculada automaticamente (Price). Edite para usar a parcela real; apague para voltar ao automático." oninput="this.dataset.manual=this.value.trim()?'1':'';recalcDiv()" onblur="recalcDiv()" style="width:90px;color:var(--red);font-weight:700"></td>` +
       `<td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>SIM</option><option>NÃO</option></select></td>` +
       `<td><button class="btn-del" onclick="delRow(this);recalcDiv()">✕</button></td>`;
     divTbody.appendChild(tr);
@@ -1605,8 +1613,22 @@ function aplicarSnapshot(snap){
       });
     }
   }
+  marcarParcelasManuais();
   formatNumInputs();
   recalcFin(); recalcImovel(); recalcDiv(); recalcAll();
+}
+
+// Após restaurar da nuvem: parcela diferente da calculada (>0,5%) = editada pelo usuário
+function marcarParcelasManuais(){
+  document.querySelectorAll('#div-tbody tr').forEach(tr=>{
+    const inp=tr.querySelectorAll('input');
+    const pc=tr.querySelector('input.div-pmt'); if(!pc) return;
+    const v=parseBR(pc.value)||0; if(v<=0) return;
+    const s=parseBR(inp[1]?.value)||0, anos=parseBR(inp[2]?.value)||1, taxa=parseBR(inp[3]?.value)||10;
+    const im=taxa/100/12, n=anos*12;
+    const calc=im>0?s*im/(1-Math.pow(1+im,-n)):s/n;
+    if(Math.abs(v-calc)/Math.max(calc,1)>0.005) pc.dataset.manual='1';
+  });
 }
 
 // ══════════════════════════════════════════════════════════

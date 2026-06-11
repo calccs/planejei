@@ -102,8 +102,12 @@ CREATE TABLE IF NOT EXISTS dividas (
   saldo             NUMERIC,
   prazo_anos        NUMERIC,
   taxa_anual        NUMERIC,
+  parcela_mensal    NUMERIC,
   abater_patrimonio TEXT
 );
+
+-- Migração para bancos criados antes da coluna parcela_mensal
+ALTER TABLE dividas ADD COLUMN IF NOT EXISTS parcela_mensal NUMERIC;
 
 -- Educação: 5 fases fixas (Pré-Escola → Pós), na ordem do planejador
 CREATE TABLE IF NOT EXISTS educacao (

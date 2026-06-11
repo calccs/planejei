@@ -34,7 +34,7 @@ const TABELAS = {
   desp:   { tabela: 'despesas',           cols: ['categoria','valor_mensal'],                                num: [1] },
   proj:   { tabela: 'projetos_protecao',  cols: ['nome','tipo','valor','prazo_anos'],                        num: [2,3] },
   recfut: { tabela: 'receitas_futuras',   cols: ['descricao','valor','observacoes'],                         num: [1] },
-  div:    { tabela: 'dividas',            cols: ['descricao','saldo','prazo_anos','taxa_anual','abater_patrimonio'], num: [1,2,3] },
+  div:    { tabela: 'dividas',            cols: ['descricao','saldo','prazo_anos','taxa_anual','parcela_mensal','abater_patrimonio'], num: [1,2,3,4] },
   edu:    { tabela: 'educacao',           cols: ['custo_total','observacoes'],                               num: [0] },
 };
 
