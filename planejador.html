@@ -145,6 +145,7 @@
   <div style="display:flex;gap:8px;align-items:center">
     <span id="usuario-info" style="display:none;font-size:11px;color:var(--text2)"></span>
     <button id="btn-planos" class="btn-sm" onclick="mostrarGerentePlanos()" style="display:none">📂 Planos</button>
+    <button class="btn-sm" onclick="exportarMapaMental()">🧠 Mapa Mental</button>
     <button class="btn-sm" onclick="salvarDados()">💾 Salvar</button>
     <button class="btn-print" onclick="window.print()">🖨️ PDF</button>
     <button id="btn-sair" class="btn-sm" onclick="sairConta()" style="display:none">Sair</button>
@@ -2039,6 +2040,149 @@ document.addEventListener('focusout', e => {
   const raw = parseBR(el.value);
   el.value = (raw || raw === 0) ? fmtInput(raw, INT_FIELDS.has(el.id)) : '';
 }, true);
+
+// ══════════════════════════════════════════════════════════
+// EXPORTAR MAPA MENTAL (SVG)
+// ══════════════════════════════════════════════════════════
+function exportarMapaMental(){
+  const W=2000, H=1300, cx=W/2, cy=H/2;
+
+  // ── coletar dados ──
+  const gv = id => document.getElementById(id)?.value||'';
+  const nome = gv('nome')||'Cliente';
+  const readTb = id => [...(document.getElementById(id)?.rows||[])].map(tr=>
+    [...tr.querySelectorAll('input,select')].map(e=>e.value));
+  const pv  = s => parseBR(s)||0;
+  const brs = v => 'R$'+Math.round(v||0).toLocaleString('pt-BR');
+
+  const deps  = readTb('dep-tbody').filter(r=>r[0])
+                  .map(r=>r[0]+(r[1]?` (${r[1]} anos)`:''));
+  const fams  = readTb('fam-tbody').filter(r=>r[0])
+                  .map(r=>`${r[0]} — ${r[1]}${r[2]?` (${r[2]})`:''}` );
+  const ativos= readTb('fin-tbody').filter(r=>pv(r[1])>0)
+                  .sort((a,b)=>pv(b[1])-pv(a[1])).slice(0,5)
+                  .map(r=>`${r[0]}: ${brs(pv(r[1]))}`);
+  const bens  = readTb('imovel-tbody').filter(r=>pv(r[1])>0)
+                  .slice(0,4).map(r=>`${r[0]}: ${brs(pv(r[1]))}`);
+  const recs  = readTb('rec-tbody').filter(r=>pv(r[1])>0)
+                  .map(r=>`${r[0]}: ${brs(pv(r[1]))}`).slice(0,5);
+  const desps = readTb('desp-tbody').filter(r=>pv(r[1])>0)
+                  .map(r=>`${r[0]}: ${brs(pv(r[1]))}`).slice(0,5);
+  const divs  = readTb('div-tbody').filter(r=>pv(r[1])>0)
+                  .map(r=>`${r[0]}: ${brs(pv(r[1]))}`).slice(0,5);
+  const mts   = readTb('metas-tbody').filter(r=>r[0])
+                  .map(r=>r[0]+(pv(r[1])>0?` — ${brs(pv(r[1]))}`:'')).slice(0,5);
+
+  const civil    = gv('civil');
+  const regime   = gv('regime_casamento');
+  const dupCid   = gv('dupla_cidadania');
+  const saidaFisc= gv('saida_fiscal');
+  const idApo    = gv('idade_apo');
+  const rendApo  = gv('renda_apo');
+  const poupanca = gv('poupanca');
+
+  // ── definir ramos (máx 5 itens cada) ──
+  const MAX=5;
+  const left=[
+    { label:'Dados Pessoais', color:'#7c6fff',
+      items:[ gv('idade')&&`${gv('idade')} anos`, gv('profissao')||null, civil||null,
+              (civil==='Casado'||civil==='União Estável')&&regime||null,
+              dupCid!=='Não'&&`Cidadania: ${dupCid}`,
+              saidaFisc!=='Não'&&`Saída fiscal: ${saidaFisc}`,
+              gv('vida')&&`Linha de vida: ${gv('vida')} anos`,
+            ].filter(Boolean).slice(0,MAX) },
+    { label:'Patrimônio',    color:'#d946ef',
+      items:[...ativos,...bens].slice(0,MAX) },
+    { label:'Aposentadoria', color:'#a78bfa',
+      items:[ idApo&&`Aposentar aos ${idApo} anos`,
+              rendApo&&`Renda: ${brs(pv(rendApo))}/mês`,
+              poupanca&&`Poupança: ${brs(pv(poupanca))}/mês`,
+            ].filter(Boolean).slice(0,MAX) },
+    { label:'Metas',         color:'#fb923c', items:mts },
+  ];
+  const right=[
+    { label:'Família',  color:'#34d399',
+      items:[...deps.map(d=>'Dep.: '+d),...fams].slice(0,MAX) },
+    { label:'Receitas', color:'#38bdf8', items:recs },
+    { label:'Despesas', color:'#fbbf24', items:desps },
+    { label:'Dívidas',  color:'#f87171', items:divs },
+  ];
+
+  // ── constantes de layout ──
+  const SPREAD=540, BXL=cx-370, BXR=cx+370;
+  const IW=290, IH=27, IGAP=5, BH=36, BW0=170;
+  const makeYs = n => Array.from({length:n},(_,i)=>n===1?cy:cy-SPREAD/2+SPREAD/(n-1)*i);
+  const LYS=makeYs(left.length), RYS=makeYs(right.length);
+
+  // ── helpers ──
+  const ex = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                               .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const tc = (s,n) => s.length>n ? s.slice(0,n-1)+'…' : s;
+
+  let out='';
+
+  const drawBranch=(branch,bx,by,side)=>{
+    const items=branch.items.filter(Boolean);
+    const isL=side==='left';
+    const bw=Math.max(BW0, branch.label.length*9+30), bh2=bw/2;
+    // Linha central → ramo
+    const cnEdge=isL?cx-110:cx+110, cpx=isL?cx-180:cx+180;
+    const brEdge=isL?bx+bh2:bx-bh2;
+    out+=`<path d="M${cnEdge},${cy} C${cpx},${cy} ${brEdge},${by} ${bx},${by}" `+
+         `fill="none" stroke="${branch.color}" stroke-width="2.5" opacity="0.55"/>`;
+    // Nó do ramo
+    out+=`<rect x="${bx-bh2}" y="${by-BH/2}" width="${bw}" height="${BH}" rx="${BH/2}" fill="${branch.color}"/>`;
+    out+=`<text x="${bx}" y="${by}" text-anchor="middle" dominant-baseline="middle" `+
+         `font-size="13" font-weight="700" fill="#fff" font-family="Arial,sans-serif">${ex(branch.label)}</text>`;
+    if(!items.length) return;
+    // Itens em coluna lateral
+    const totH=items.length*(IH+IGAP)-IGAP, startY=by-totH/2;
+    const icx=isL?bx-bh2-24-IW/2:bx+bh2+24+IW/2;
+    const lineX=isL?bx-bh2:bx+bh2;
+    const itemEdge=isL?icx+IW/2:icx-IW/2;
+    items.forEach((item,j)=>{
+      const iy=startY+j*(IH+IGAP)+IH/2;
+      const mpx=(lineX+itemEdge)/2;
+      out+=`<path d="M${lineX},${by} C${mpx},${by} ${mpx},${iy} ${itemEdge},${iy}" `+
+           `fill="none" stroke="${branch.color}" stroke-width="1" opacity="0.3"/>`;
+      out+=`<rect x="${icx-IW/2}" y="${iy-IH/2}" width="${IW}" height="${IH}" rx="${IH/2}" `+
+           `fill="${branch.color}18" stroke="${branch.color}" stroke-width="0.8"/>`;
+      out+=`<text x="${icx}" y="${iy}" text-anchor="middle" dominant-baseline="middle" `+
+           `font-size="10" fill="${branch.color}" font-family="Arial,sans-serif">${ex(tc(item,42))}</text>`;
+    });
+  };
+
+  left.forEach ((b,i)=>drawBranch(b,BXL,LYS[i],'left'));
+  right.forEach((b,i)=>drawBranch(b,BXR,RYS[i],'right'));
+
+  // Nó central
+  const cnW=220,cnH=72;
+  out+=`<rect x="${cx-cnW/2}" y="${cy-cnH/2}" width="${cnW}" height="${cnH}" rx="${cnH/2}" `+
+       `fill="url(#cg)" filter="url(#sh)"/>`;
+  out+=`<text x="${cx}" y="${cy-9}" text-anchor="middle" dominant-baseline="middle" `+
+       `font-size="17" font-weight="700" fill="#fff" font-family="Arial,sans-serif">${ex(tc(nome,24))}</text>`;
+  out+=`<text x="${cx}" y="${cy+13}" text-anchor="middle" dominant-baseline="middle" `+
+       `font-size="9.5" fill="rgba(255,255,255,0.6)" font-family="Arial,sans-serif">Planejamento Financeiro</text>`;
+
+  const svg=`<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+<defs>
+  <linearGradient id="cg" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#6c63ff"/><stop offset="100%" stop-color="#43e97b"/>
+  </linearGradient>
+  <filter id="sh"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-opacity="0.5"/></filter>
+</defs>
+<rect width="${W}" height="${H}" fill="#0f0f1a"/>
+${out}
+</svg>`;
+
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+  a.download=(nome+'-mapa-mental.svg').replace(/\s+/g,'-').toLowerCase();
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('🧠 Mapa mental exportado!');
+}
 
 carregarDados();
 buildFinTable();
