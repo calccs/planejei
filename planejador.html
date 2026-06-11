@@ -1734,15 +1734,18 @@ Object.entries(TIPS).forEach(([id,tip])=>{
 });
 
 // ── Formatação BR nos inputs numéricos ────────────────────
-const fmtInput = v => {
+// Campos de número inteiro (sem casas decimais): idades e expectativa de vida
+const INT_FIELDS = new Set(['idade','vida','idade_apo']);
+const fmtInput = (v, intOnly) => {
   const n = parseBR(String(v));
   if (!n && n !== 0) return '';
+  if (intOnly) return Math.round(n).toLocaleString('pt-BR');
   return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 };
 function formatNumInputs(root) {
   (root||document).querySelectorAll('input[inputmode="decimal"]').forEach(el => {
     const raw = parseBR(el.value);
-    if (!isNaN(raw) && el.value !== '') el.value = fmtInput(raw);
+    if (!isNaN(raw) && el.value !== '') el.value = fmtInput(raw, INT_FIELDS.has(el.id));
   });
 }
 document.addEventListener('focusin', e => {
@@ -1755,7 +1758,7 @@ document.addEventListener('focusout', e => {
   const el = e.target;
   if (el.tagName !== 'INPUT' || el.inputMode !== 'decimal') return;
   const raw = parseBR(el.value);
-  el.value = (raw || raw === 0) ? fmtInput(raw) : '';
+  el.value = (raw || raw === 0) ? fmtInput(raw, INT_FIELDS.has(el.id)) : '';
 }, true);
 
 carregarDados();
