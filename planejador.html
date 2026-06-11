@@ -320,6 +320,13 @@
     <div class="section">
       <div class="section-title">Cenários de Projeção Patrimonial</div>
 
+      <div class="grid3" style="margin-bottom:14px">
+        <div class="field"><label>Rentabilidade anual da projeção (% a.a.)</label><input id="rent_proj" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"></div>
+        <div style="grid-column:span 2;display:flex;align-items:center;font-size:11px;color:var(--text2)">
+          Informe a taxa nominal que deseja usar nas projeções. Com <strong>&nbsp;0&nbsp;</strong> o planejador usa automaticamente a rentabilidade ponderada da carteira. A taxa variável por fase (abaixo), quando ativada, tem prioridade.
+        </div>
+      </div>
+
       <div class="collapsible-header" onclick="toggleCollapse('taxa-brackets')">
         <h4>⚙️ Taxas por fase de vida (variável por idade)</h4>
         <span class="collapsible-arrow open" id="arrow-taxa-brackets">▼</span>
@@ -336,7 +343,7 @@
           </div>
           <div class="toggle-row" style="margin-top:10px">
             <label class="switch"><input type="checkbox" id="usar-taxa-variavel" onchange="recalcProjecao()"><span class="slider"></span></label>
-            <span class="toggle-label">Usar taxa variável por fase (desativado = rentabilidade da carteira atual)</span>
+            <span class="toggle-label">Usar taxa variável por fase (tem prioridade sobre a rentabilidade anual informada acima)</span>
           </div>
         </div>
       </div>
@@ -599,8 +606,9 @@ const gc   = id => document.getElementById(id)?.checked;
 
 function getTaxaParaIdade(idade, idadeApo) {
   if (!gc('usar-taxa-variavel')) {
-    // Rentabilidade ponderada da carteira (média dos %CDI pesada pelo valor).
-    // CDI cheio só como fallback se a carteira estiver vazia/zerada.
+    // Prioridade: taxa manual da aba Projeção > rentabilidade ponderada da carteira > CDI
+    const manual = g('rent_proj');
+    if (manual > 0) return manual/100;
     const r = getRentPonderada();
     return r > 0 ? r : g('cdi')/100;
   }
@@ -852,7 +860,8 @@ function recalcProjecao() {
   const metaRegra=g('renda_apo')*12/rr;
   const atApo=[s1,s2,s3].map(s=>{ const f=s.find(p=>p.age===idadeApo); return f?f.val:(s[s.length-1]?.val||0); });
 
-  document.getElementById('pmt-result').innerHTML=`<div class="kpi" style="margin:0"><div class="kpi-val gold">${brl0(pmtNec)}/mês</div><div class="kpi-label">Poupança necessária para a meta</div><div class="kpi-sub">Em ${nPr} anos com rentabilidade de ${(taxaProj*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}% a.a. (carteira atual)</div></div>`;
+  const origemTaxa = gc('usar-taxa-variavel') ? 'taxa por fase' : (g('rent_proj')>0 ? 'taxa informada' : 'carteira atual');
+  document.getElementById('pmt-result').innerHTML=`<div class="kpi" style="margin:0"><div class="kpi-val gold">${brl0(pmtNec)}/mês</div><div class="kpi-label">Poupança necessária para a meta</div><div class="kpi-sub">Em ${nPr} anos com rentabilidade de ${(taxaProj*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}% a.a. (${origemTaxa})</div></div>`;
 
   document.getElementById('scenarios-cards').innerHTML=[
     {title:'Cenário 1 — Atual',pmt:pmt1,fv:s1[s1.length-1]?.val,atApo:atApo[0],active:false},
@@ -1709,6 +1718,7 @@ const TIPS = {
   reajuste_poupanca:'% de aumento anual do aporte mensal (reajuste salarial, por exemplo)',
   reajuste_desp:'% de crescimento anual das despesas — geralmente igual à inflação',
   meta:'Patrimônio financeiro alvo a ser acumulado',
+  rent_proj:'Rentabilidade nominal anual usada nas projeções — deixe 0 para usar a rentabilidade ponderada da carteira',
   prazo_meta:'Prazo em anos para atingir a meta patrimonial',
   r1:'Rentabilidade nominal anual na fase de acumulação (até aposentadoria)',
   r2:'Rentabilidade nominal nos primeiros 5 anos de aposentadoria',
