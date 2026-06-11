@@ -379,7 +379,31 @@
         </div>
       </div>
 
-      <div style="height:14px"></div>
+      <div style="margin:14px 0 4px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px">APORTE ADICIONAL NOS CENÁRIOS (em relação ao aporte atual)</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+          <div class="field" style="margin:0">
+            <label style="font-size:11px">Cenário 2 — Moderado</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;color:var(--text2)">+</span>
+              <input id="pct_mod" type="text" inputmode="decimal" value="20" style="width:60px" oninput="recalcProjecao()">
+              <span style="font-size:12px;color:var(--text2)">% do aporte atual</span>
+            </div>
+          </div>
+          <div class="field" style="margin:0">
+            <label style="font-size:11px">Cenário 3 — Acelerado</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;color:var(--text2)">+</span>
+              <input id="pct_acel" type="text" inputmode="decimal" value="50" style="width:60px" oninput="recalcProjecao()">
+              <span style="font-size:12px;color:var(--text2)">% do aporte atual</span>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text2);max-width:280px;line-height:1.5">
+            Ex.: com aporte atual de R$2.000/mês, o Moderado usa R$2.400/mês (+20%) e o Acelerado R$3.000/mês (+50%).
+          </div>
+        </div>
+      </div>
+      <div style="height:10px"></div>
       <div class="scenarios" id="scenarios-cards"></div>
 
       <div class="chart-wrap">
@@ -881,7 +905,10 @@ function recalcAll() {
 function recalcProjecao() {
   const pv=getPatrimFin(), cdi=g('cdi')/100, infl=g('inflacao')/100;
   const idadeAt=g('idade'), idadeApo=g('idade_apo'), vita=g('vida');
-  const pmt1=g('poupanca')*12, pmt2=130000, pmt3=180000;
+  const pmt1=g('poupanca')*12;
+  const pctMod =(parseBR(document.getElementById('pct_mod')?.value)||20)/100;
+  const pctAcel=(parseBR(document.getElementById('pct_acel')?.value)||50)/100;
+  const pmt2=pmt1*(1+pctMod), pmt3=pmt1*(1+pctAcel);
 
   const s1=buildSerie(pmt1), s2=buildSerie(pmt2), s3=buildSerie(pmt3);
   scenarioData=[s1,s2,s3];
@@ -901,9 +928,9 @@ function recalcProjecao() {
   document.getElementById('pmt-result').innerHTML=`<div class="kpi" style="margin:0"><div class="kpi-val gold">${brl0(pmtNec)}/mês</div><div class="kpi-label">Poupança necessária para a meta</div><div class="kpi-sub">Em ${nPr} anos com rentabilidade de ${(taxaProj*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}% a.a. (${origemTaxa})</div></div>`;
 
   document.getElementById('scenarios-cards').innerHTML=[
-    {title:'Cenário 1 — Atual',pmt:pmt1,fv:s1[s1.length-1]?.val,atApo:atApo[0],active:false},
-    {title:'Cenário 2 — Moderado (+R$130k/ano)',pmt:pmt2,fv:s2[s2.length-1]?.val,atApo:atApo[1],active:false},
-    {title:'Cenário 3 — Acelerado (+R$180k/ano)',pmt:pmt3,fv:s3[s3.length-1]?.val,atApo:atApo[2],active:true},
+    {title:'Cenário 1 — Atual',pmt:pmt1,fv:s1[s1.length-1]?.val,atApo:atApo[0]},
+    {title:`Cenário 2 — Moderado (+${(pctMod*100).toLocaleString('pt-BR',{maximumFractionDigits:0})}%)`,pmt:pmt2,fv:s2[s2.length-1]?.val,atApo:atApo[1]},
+    {title:`Cenário 3 — Acelerado (+${(pctAcel*100).toLocaleString('pt-BR',{maximumFractionDigits:0})}%)`,pmt:pmt3,fv:s3[s3.length-1]?.val,atApo:atApo[2]},
   ].map((c,i)=>`<div class="scenario-card ${c.active?'active':''}">
     <div class="scenario-title">${c.title}</div>
     <div class="scenario-row">Aporte anual<span>${brl0(c.pmt)}</span></div>
