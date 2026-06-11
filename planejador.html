@@ -819,22 +819,22 @@ function recalcAll() {
       <div class="kpi">
         <div class="kpi-val ${cobEmerg>=6?'green':cobEmerg>=3?'gold':'red'}">${cobEmerg.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} meses</div>
         <div class="kpi-label">Cobertura de Emergência</div>
-        <div class="kpi-sub">${cobEmerg>=6?'✅ Excelente (≥6 meses)':cobEmerg>=3?'⚠️ Adequado (3–6 meses)':'❌ Insuficiente (<3 meses)'}</div>
+        <div class="kpi-sub">Quantos meses de despesa seu patrimônio financeiro banca — ${cobEmerg>=6?'✅ excelente (≥6)':cobEmerg>=3?'⚠️ adequado (3–6)':'❌ insuficiente (<3)'}</div>
       </div>
       <div class="kpi">
         <div class="kpi-val ${ieRenda<=30?'green':ieRenda<=45?'gold':'red'}">${ieRenda.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</div>
         <div class="kpi-label">Índice de Endividamento</div>
-        <div class="kpi-sub">${ieRenda<=30?'✅ Saudável (<30%)':ieRenda<=45?'⚠️ Moderado (31–45%)':'❌ Crítico (>45%)'} da renda</div>
+        <div class="kpi-sub">Fatia da renda mensal comprometida com parcelas de dívidas — ${ieRenda<=30?'✅ saudável (<30%)':ieRenda<=45?'⚠️ moderado (31–45%)':'❌ crítico (>45%)'}</div>
       </div>
       <div class="kpi">
         <div class="kpi-val ${ipoup>=20?'green':ipoup>=10?'gold':'red'}">${ipoup.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</div>
         <div class="kpi-label">Índice de Poupança</div>
-        <div class="kpi-sub">Meta: ≥20% | "Pague-se primeiro"</div>
+        <div class="kpi-sub">Quanto da renda sobra após as despesas para investir — meta ≥20% ("pague-se primeiro")</div>
       </div>
       <div class="kpi">
         <div class="kpi-val ${ratio<=0.2?'green':ratio<=0.4?'gold':'red'}">${(ratio*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</div>
         <div class="kpi-label">Dívidas / Patrimônio</div>
-        <div class="kpi-sub">${ratio<=0.2?'✅ Baixo':ratio<=0.4?'⚠️ Moderado':'❌ Alto'}</div>
+        <div class="kpi-sub">Quanto do seu patrimônio total as dívidas representam — ${ratio<=0.2?'✅ baixo (≤20%)':ratio<=0.4?'⚠️ moderado (21–40%)':'❌ alto (>40%)'}</div>
       </div>
     </div>
     ${despMensal>0?`<div style="font-size:11px;color:var(--text2);margin-top:4px">
