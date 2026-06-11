@@ -233,7 +233,21 @@
     <div class="section">
       <div class="section-title">Dados Pessoais</div>
       <div class="grid3">
-        <div class="field"><label>Nome</label><input id="nome" value="" oninput="recalcAll()"></div>
+        <div class="field" style="grid-column:span 3;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div id="foto-avatar" style="width:72px;height:72px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;cursor:pointer" onclick="document.getElementById('foto-input').click()" title="Clique para adicionar foto">
+            <img id="foto-preview" style="width:100%;height:100%;object-fit:cover;display:none">
+            <span id="foto-icon" style="font-size:26px;color:var(--text2)">👤</span>
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:4px">Nome completo</label>
+            <input id="nome" value="" oninput="recalcAll()" style="width:260px">
+            <div style="margin-top:6px;display:flex;gap:8px">
+              <button class="btn-sm" onclick="document.getElementById('foto-input').click()" style="font-size:11px">📷 Foto</button>
+              <button id="foto-btn-remover" class="btn-sm" onclick="removerFoto()" style="font-size:11px;display:none;color:var(--red)">✕ Remover</button>
+            </div>
+            <input type="file" id="foto-input" accept="image/*" style="display:none" onchange="carregarFoto(this)">
+          </div>
+        </div>
         <div class="field"><label>Idade atual</label><input id="idade" type="text" inputmode="decimal" value="0" oninput="recalcAll()"></div>
         <div class="field"><label>Expectativa de vida</label><input id="vida" type="text" inputmode="decimal" value="0" oninput="recalcAll()"></div>
         <div class="field"><label>Estado civil</label>
@@ -2042,6 +2056,42 @@ document.addEventListener('focusout', e => {
 }, true);
 
 // ══════════════════════════════════════════════════════════
+// FOTO DO CLIENTE
+// ══════════════════════════════════════════════════════════
+let fotoBase64 = localStorage.getItem('planejei_foto') || '';
+
+function carregarFoto(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    fotoBase64 = e.target.result;
+    try { localStorage.setItem('planejei_foto', fotoBase64); } catch(_) {}
+    _aplicarFoto();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removerFoto() {
+  fotoBase64 = '';
+  localStorage.removeItem('planejei_foto');
+  document.getElementById('foto-input').value = '';
+  _aplicarFoto();
+}
+
+function _aplicarFoto() {
+  const img = document.getElementById('foto-preview');
+  const ico = document.getElementById('foto-icon');
+  const rem = document.getElementById('foto-btn-remover');
+  if (fotoBase64) {
+    img.src = fotoBase64; img.style.display = 'block';
+    ico.style.display = 'none'; rem.style.display = 'inline-block';
+  } else {
+    img.src = ''; img.style.display = 'none';
+    ico.style.display = 'block'; rem.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
 // EXPORTAR MAPA MENTAL (SVG)
 // ══════════════════════════════════════════════════════════
 function exportarMapaMental(){
@@ -2049,7 +2099,8 @@ function exportarMapaMental(){
 
   // ── coletar dados ──
   const gv = id => document.getElementById(id)?.value||'';
-  const nome = gv('nome')||'Cliente';
+  const nomeCompleto = gv('nome')||'Cliente';
+  const nome = nomeCompleto.trim().split(/\s+/)[0]; // primeiro nome
   const readTb = id => [...(document.getElementById(id)?.rows||[])].map(tr=>
     [...tr.querySelectorAll('input,select')].map(e=>e.value));
   const pv  = s => parseBR(s)||0;
@@ -2155,14 +2206,30 @@ function exportarMapaMental(){
   left.forEach ((b,i)=>drawBranch(b,BXL,LYS[i],'left'));
   right.forEach((b,i)=>drawBranch(b,BXR,RYS[i],'right'));
 
-  // Nó central
-  const cnW=220,cnH=72;
-  out+=`<rect x="${cx-cnW/2}" y="${cy-cnH/2}" width="${cnW}" height="${cnH}" rx="${cnH/2}" `+
-       `fill="url(#cg)" filter="url(#sh)"/>`;
-  out+=`<text x="${cx}" y="${cy-9}" text-anchor="middle" dominant-baseline="middle" `+
-       `font-size="17" font-weight="700" fill="#fff" font-family="Arial,sans-serif">${ex(tc(nome,24))}</text>`;
-  out+=`<text x="${cx}" y="${cy+13}" text-anchor="middle" dominant-baseline="middle" `+
-       `font-size="9.5" fill="rgba(255,255,255,0.6)" font-family="Arial,sans-serif">Planejamento Financeiro</text>`;
+  // Nó central: com foto (círculo) ou sem foto (pílula)
+  let extraDefs='';
+  if(fotoBase64){
+    const r=72, py=cy-18;
+    extraDefs=`<clipPath id="pc"><circle cx="${cx}" cy="${py}" r="${r}"/></clipPath>`;
+    // Anel gradiente
+    out+=`<circle cx="${cx}" cy="${py}" r="${r+5}" fill="url(#cg)" filter="url(#sh)"/>`;
+    // Foto circular
+    out+=`<image href="${fotoBase64}" x="${cx-r}" y="${py-r}" width="${r*2}" height="${r*2}" `+
+         `clip-path="url(#pc)" preserveAspectRatio="xMidYMid slice"/>`;
+    // Nome abaixo da foto
+    out+=`<text x="${cx}" y="${py+r+22}" text-anchor="middle" `+
+         `font-size="19" font-weight="700" fill="#fff" font-family="Arial,sans-serif">${ex(nome)}</text>`;
+    out+=`<text x="${cx}" y="${py+r+42}" text-anchor="middle" `+
+         `font-size="10" fill="rgba(255,255,255,0.55)" font-family="Arial,sans-serif">Planejamento Financeiro</text>`;
+  } else {
+    const cnW=220,cnH=72;
+    out+=`<rect x="${cx-cnW/2}" y="${cy-cnH/2}" width="${cnW}" height="${cnH}" rx="${cnH/2}" `+
+         `fill="url(#cg)" filter="url(#sh)"/>`;
+    out+=`<text x="${cx}" y="${cy-9}" text-anchor="middle" dominant-baseline="middle" `+
+         `font-size="19" font-weight="700" fill="#fff" font-family="Arial,sans-serif">${ex(nome)}</text>`;
+    out+=`<text x="${cx}" y="${cy+13}" text-anchor="middle" dominant-baseline="middle" `+
+         `font-size="10" fill="rgba(255,255,255,0.55)" font-family="Arial,sans-serif">Planejamento Financeiro</text>`;
+  }
 
   const svg=`<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
@@ -2171,6 +2238,7 @@ function exportarMapaMental(){
     <stop offset="0%" stop-color="#6c63ff"/><stop offset="100%" stop-color="#43e97b"/>
   </linearGradient>
   <filter id="sh"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-opacity="0.5"/></filter>
+  ${extraDefs}
 </defs>
 <rect width="${W}" height="${H}" fill="#0f0f1a"/>
 ${out}
@@ -2184,6 +2252,7 @@ ${out}
   toast('🧠 Mapa mental exportado!');
 }
 
+if(fotoBase64) _aplicarFoto();
 carregarDados();
 buildFinTable();
 buildImovelTable();
