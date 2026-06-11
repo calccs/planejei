@@ -191,3 +191,17 @@ ALTER TABLE perfil_campos DROP CONSTRAINT IF EXISTS perfil_campos_pkey;
 CREATE UNIQUE INDEX IF NOT EXISTS perfil_campos_plan_campo
   ON perfil_campos(planejamento_id, campo)
   WHERE planejamento_id IS NOT NULL;
+
+-- 5. Permitir cliente_id nulo nas tabelas de dados
+--    (dados agora são escopados por planejamento_id; cliente_id era a chave antiga)
+ALTER TABLE perfil_campos      ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE dependentes        ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE ativos_financeiros ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE imoveis            ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE metas              ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE receitas           ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE despesas           ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE projetos_protecao  ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE receitas_futuras   ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE dividas            ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE educacao           ALTER COLUMN cliente_id DROP NOT NULL;

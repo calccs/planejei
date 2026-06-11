@@ -212,6 +212,25 @@
   </div>
 </div>
 
+<!-- ═══════════════════ MODAL MAPA MENTAL ═══════════════════ -->
+<div id="mapa-modal" style="position:fixed;inset:0;z-index:3000;display:none;flex-direction:column;background:#0a0a14">
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <span style="font-size:13px;font-weight:700;flex:1;color:var(--text)">🧠 Mapa Mental</span>
+    <span id="mapa-zoom-label" style="font-size:11px;color:var(--text2);min-width:36px;text-align:right"></span>
+    <button class="btn-sm" onclick="mapaZoom(-0.15)" title="Reduzir">🔍−</button>
+    <button class="btn-sm" onclick="mapaZoom(+0.15)" title="Ampliar">🔍+</button>
+    <button class="btn-sm" onclick="mapaAjustar()" title="Ajustar à tela">⤢ Ajustar</button>
+    <button class="btn-sm" onclick="baixarMapaMental()"
+      style="background:linear-gradient(90deg,#6c63ff,#43e97b);color:#000;border:none;font-weight:700">⬇️ Exportar SVG</button>
+    <button class="btn-sm" onclick="fecharMapaMental()">✕ Fechar</button>
+  </div>
+  <div id="mapa-scroll" style="flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px">
+    <div id="mapa-svg-wrap" style="transform-origin:top center;transition:transform .15s">
+      <!-- SVG inserido aqui -->
+    </div>
+  </div>
+</div>
+
 <div class="main">
 
   <div class="tabs">
@@ -2244,9 +2263,46 @@ function exportarMapaMental(){
 ${out}
 </svg>`;
 
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
-  a.download=(nome+'-mapa-mental.svg').replace(/\s+/g,'-').toLowerCase();
+  // Mostrar no modal em vez de baixar direto
+  _svgAtual = svg;
+  _nomeArquivoMapa = (nomeCompleto+'-mapa-mental.svg').replace(/\s+/g,'-').toLowerCase();
+  const wrap = document.getElementById('mapa-svg-wrap');
+  wrap.innerHTML = svg;
+  // Ajustar escala inicial ao tamanho da tela
+  _mapaScale = 1;
+  document.getElementById('mapa-modal').style.display = 'flex';
+  setTimeout(mapaAjustar, 50); // aguarda render para calcular tamanho real
+}
+
+let _svgAtual = '', _nomeArquivoMapa = '', _mapaScale = 1;
+
+function mapaZoom(delta){
+  _mapaScale = Math.min(3, Math.max(0.2, _mapaScale + delta));
+  _aplicarZoom();
+}
+function mapaAjustar(){
+  const scroll = document.getElementById('mapa-scroll');
+  const wrap   = document.getElementById('mapa-svg-wrap');
+  const svgEl  = wrap.querySelector('svg');
+  if(!svgEl) return;
+  const svgW = parseFloat(svgEl.getAttribute('width'))||2000;
+  const avail = scroll.clientWidth - 40;
+  _mapaScale = Math.min(1, avail / svgW);
+  _aplicarZoom();
+}
+function _aplicarZoom(){
+  const wrap = document.getElementById('mapa-svg-wrap');
+  wrap.style.transform = `scale(${_mapaScale})`;
+  document.getElementById('mapa-zoom-label').textContent = Math.round(_mapaScale*100)+'%';
+}
+function fecharMapaMental(){
+  document.getElementById('mapa-modal').style.display = 'none';
+}
+function baixarMapaMental(){
+  if(!_svgAtual) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([_svgAtual],{type:'image/svg+xml'}));
+  a.download = _nomeArquivoMapa;
   a.click();
   URL.revokeObjectURL(a.href);
   toast('🧠 Mapa mental exportado!');
