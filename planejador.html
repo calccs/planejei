@@ -476,7 +476,7 @@
               <tr><td><input value="Renda Variável (investimento)"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
               <tr><td><input value="Previdência Complementar"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
               <tr><td><input value="Aluguel / Condomínio"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
-              <tr><td><input value="Plano de Saúde"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Saúde (remédios e consultas)"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
               <tr><td><input value="Mercado e Alimentação"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
               <tr><td><input value="Transporte / Combustível"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
               <tr><td><input value="Lazer e Viagens"></td><td><input type="text" inputmode="decimal" value="0" class="desp-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
@@ -1170,7 +1170,7 @@ function parseDEC(texto) {
   const DESC_PAG = {
     '0001':'Previdência Social','0002':'Previdência Compl. (VGBL)',
     '0006':'Prev. Privada PGBL','0007':'FAPI',
-    '0009':'Saúde (plano e consultas)','0010':'Arrendamento Rural',
+    '0009':'Saúde (remédios e consultas)','0010':'Arrendamento Rural',
     '0012':'Instrução / Educação','0014':'Médico no Exterior','0999':'Outros'
   };
   const DESC_EXCL = {
@@ -1511,7 +1511,14 @@ function aplicarDEC(dados) {
   // ── Orçamento: Despesas ─────────────────────────────────
   const despTbody = document.getElementById('desp-tbody');
   if (despTbody && dados.pagamentos.length > 0) {
+    const norm = s => (s||'').trim().toLowerCase();
     for (const p of dados.pagamentos) {
+      // Categoria já existe? Atualiza o valor em vez de criar linha duplicada
+      const existente = [...despTbody.rows].find(tr => norm(tr.querySelectorAll('input')[0]?.value) === norm(p.desc));
+      if (existente) {
+        existente.querySelectorAll('input')[1].value = fmtInput(p.valor/12);
+        continue;
+      }
       const tr = document.createElement('tr');
       tr.innerHTML =
         `<td><input value="${esc(p.desc)}"></td>` +
@@ -1519,6 +1526,9 @@ function aplicarDEC(dados) {
         `<td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td>`;
       despTbody.appendChild(tr);
     }
+    // "Outros" sempre por último
+    const outros = [...despTbody.rows].find(tr => norm(tr.querySelectorAll('input')[0]?.value) === 'outros');
+    if (outros) despTbody.appendChild(outros);
     recalcOrc();
   }
 
