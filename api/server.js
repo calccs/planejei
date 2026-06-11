@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-// Planejador Financeiro Superei — API (Express + PostgreSQL)
+// Planejador Financeiro Planejei — API (Express + PostgreSQL)
 // Deploy: Railway (detecta package.json na raiz e roda npm start)
 // Variável necessária: DATABASE_URL (referência ao Postgres do Railway)
 // ════════════════════════════════════════════════════════════
@@ -66,7 +66,6 @@ app.get('/api/health', async (_req, res) => {
 // ── Sessões ────────────────────────────────────────────────
 const novoToken = () => crypto.randomBytes(32).toString('hex');
 
-// Devolve {id, email, nome} do cliente dono do token, ou null
 async function clientePorToken(token) {
   if (!token) return null;
   const { rows } = await pool.query(
@@ -142,35 +141,120 @@ app.post('/api/logout', async (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Salvar dados do planejador (requer sessão) ─────────────
-app.post('/api/salvar', async (req, res) => {
-  if (!pool) return res.status(503).json({ erro: 'Banco de dados não configurado (DATABASE_URL ausente)' });
-  const { token, nome, campos = {}, tabelas = {} } = req.body || {};
+// ════════════════════════════════════════════════════════════
+// PLANEJAMENTOS (múltiplos por usuário)
+// ════════════════════════════════════════════════════════════
+
+// Listar planejamentos do usuário
+app.post('/api/planejamentos/listar', async (req, res) => {
+  if (!pool) return res.status(503).json({ erro: 'Banco não configurado' });
+  const cli = await clientePorToken((req.body || {}).token).catch(() => null);
+  if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, nome, criado_em, atualizado_em
+         FROM planejamentos WHERE cliente_id=$1
+        ORDER BY atualizado_em DESC`, [cli.id]);
+    res.json(rows);
+  } catch (e) {
+    console.error('Erro em /api/planejamentos/listar:', e);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+});
+
+// Criar novo planejamento
+app.post('/api/planejamentos/criar', async (req, res) => {
+  if (!pool) return res.status(503).json({ erro: 'Banco não configurado' });
+  const { token, nome } = req.body || {};
   const cli = await clientePorToken(token).catch(() => null);
   if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
-  const clienteId = cli.id;
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO planejamentos (cliente_id, nome)
+       VALUES ($1,$2) RETURNING id, nome, criado_em, atualizado_em`,
+      [cli.id, String(nome || 'Novo Planejamento').substring(0, 100)]);
+    res.json(rows[0]);
+  } catch (e) {
+    console.error('Erro em /api/planejamentos/criar:', e);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+});
+
+// Renomear planejamento
+app.post('/api/planejamentos/renomear', async (req, res) => {
+  if (!pool) return res.status(503).json({ erro: 'Banco não configurado' });
+  const { token, id, nome } = req.body || {};
+  const cli = await clientePorToken(token).catch(() => null);
+  if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
+  if (!id || !nome) return res.status(400).json({ erro: 'id e nome obrigatórios' });
+  try {
+    const { rows } = await pool.query(
+      `UPDATE planejamentos SET nome=$1, atualizado_em=now()
+        WHERE id=$2 AND cliente_id=$3 RETURNING id, nome`,
+      [String(nome).substring(0, 100), id, cli.id]);
+    if (!rows.length) return res.status(404).json({ erro: 'Planejamento não encontrado' });
+    res.json(rows[0]);
+  } catch (e) {
+    console.error('Erro em /api/planejamentos/renomear:', e);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+});
+
+// Excluir planejamento (e todos os dados via CASCADE)
+app.post('/api/planejamentos/excluir', async (req, res) => {
+  if (!pool) return res.status(503).json({ erro: 'Banco não configurado' });
+  const { token, id } = req.body || {};
+  const cli = await clientePorToken(token).catch(() => null);
+  if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
+  if (!id) return res.status(400).json({ erro: 'id obrigatório' });
+  try {
+    await pool.query('DELETE FROM planejamentos WHERE id=$1 AND cliente_id=$2', [id, cli.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Erro em /api/planejamentos/excluir:', e);
+    res.status(500).json({ erro: 'Erro interno' });
+  }
+});
+
+// ── Salvar dados do planejamento (requer sessão + planejamento_id) ─
+app.post('/api/salvar', async (req, res) => {
+  if (!pool) return res.status(503).json({ erro: 'Banco de dados não configurado (DATABASE_URL ausente)' });
+  const { token, planejamento_id, nome, campos = {}, tabelas = {} } = req.body || {};
+  if (!planejamento_id) return res.status(400).json({ erro: 'planejamento_id obrigatório' });
+  const cli = await clientePorToken(token).catch(() => null);
+  if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
+
+  // Verificar que o planejamento pertence ao cliente
+  const { rows: planRows } = await pool.query(
+    'SELECT id FROM planejamentos WHERE id=$1 AND cliente_id=$2', [planejamento_id, cli.id]);
+  if (!planRows.length) return res.status(403).json({ erro: 'Planejamento não pertence a esta conta' });
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query('UPDATE clientes SET nome=COALESCE($2,nome), atualizado_em=now() WHERE id=$1',
-      [clienteId, nome || null]);
 
-    await client.query('DELETE FROM perfil_campos WHERE cliente_id=$1', [clienteId]);
+    // Atualizar nome do cliente e timestamp do planejamento
+    if (nome) await client.query('UPDATE clientes SET nome=COALESCE($2,nome), atualizado_em=now() WHERE id=$1', [cli.id, nome]);
+    await client.query('UPDATE planejamentos SET atualizado_em=now() WHERE id=$1', [planejamento_id]);
+
+    // Salvar campos do formulário
+    await client.query('DELETE FROM perfil_campos WHERE planejamento_id=$1', [planejamento_id]);
     for (const [campo, valor] of Object.entries(campos))
-      await client.query('INSERT INTO perfil_campos (cliente_id, campo, valor) VALUES ($1,$2,$3)',
-        [clienteId, campo, String(valor ?? '')]);
+      await client.query(
+        'INSERT INTO perfil_campos (planejamento_id, campo, valor) VALUES ($1,$2,$3)',
+        [planejamento_id, campo, String(valor ?? '')]);
 
+    // Salvar tabelas
     for (const [chave, cfg] of Object.entries(TABELAS)) {
-      await client.query(`DELETE FROM ${cfg.tabela} WHERE cliente_id=$1`, [clienteId]);
+      await client.query(`DELETE FROM ${cfg.tabela} WHERE planejamento_id=$1`, [planejamento_id]);
       const linhas = Array.isArray(tabelas[chave]) ? tabelas[chave] : [];
       for (const vals of linhas) {
         const colVals = cfg.cols.map((_, i) =>
           cfg.num.includes(i) ? parseBR(vals[i]) : (vals[i] ?? null));
         const ph = cfg.cols.map((_, i) => '$' + (i + 2)).join(',');
         await client.query(
-          `INSERT INTO ${cfg.tabela} (cliente_id, ${cfg.cols.join(',')}) VALUES ($1, ${ph})`,
-          [clienteId, ...colVals]);
+          `INSERT INTO ${cfg.tabela} (planejamento_id, ${cfg.cols.join(',')}) VALUES ($1, ${ph})`,
+          [planejamento_id, ...colVals]);
       }
     }
 
@@ -185,24 +269,29 @@ app.post('/api/salvar', async (req, res) => {
   }
 });
 
-// ── Carregar: devolve o snapshot completo do cliente (requer sessão)
+// ── Carregar dados do planejamento (requer sessão + planejamento_id)
 app.post('/api/carregar', async (req, res) => {
   if (!pool) return res.status(503).json({ erro: 'Banco de dados não configurado (DATABASE_URL ausente)' });
-  const cli = await clientePorToken((req.body || {}).token).catch(() => null);
+  const { token, planejamento_id } = req.body || {};
+  if (!planejamento_id) return res.status(400).json({ erro: 'planejamento_id obrigatório' });
+  const cli = await clientePorToken(token).catch(() => null);
   if (!cli) return res.status(401).json({ erro: 'Sessão expirada — entre novamente' });
-  const clienteId = cli.id;
+
+  const { rows: planRows } = await pool.query(
+    'SELECT id FROM planejamentos WHERE id=$1 AND cliente_id=$2', [planejamento_id, cli.id]);
+  if (!planRows.length) return res.status(403).json({ erro: 'Planejamento não pertence a esta conta' });
 
   try {
     const campos = {};
-    (await pool.query('SELECT campo, valor FROM perfil_campos WHERE cliente_id=$1', [clienteId]))
+    (await pool.query('SELECT campo, valor FROM perfil_campos WHERE planejamento_id=$1', [planejamento_id]))
       .rows.forEach(({ campo, valor }) =>
         campos[campo] = valor === 'true' ? true : valor === 'false' ? false : valor);
 
     const tabelas = {};
     for (const [chave, cfg] of Object.entries(TABELAS)) {
       const { rows } = await pool.query(
-        `SELECT ${cfg.cols.join(',')} FROM ${cfg.tabela} WHERE cliente_id=$1 ORDER BY id`,
-        [clienteId]);
+        `SELECT ${cfg.cols.join(',')} FROM ${cfg.tabela} WHERE planejamento_id=$1 ORDER BY id`,
+        [planejamento_id]);
       tabelas[chave] = rows.map(row => cfg.cols.map(c => row[c] == null ? '' : String(row[c])));
     }
 

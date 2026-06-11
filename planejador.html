@@ -140,10 +140,11 @@
 <div class="header">
   <div style="display:flex;align-items:center;gap:10px">
     <div class="logo">planejei</div>
-    <div class="badge-h">Planejador Financeiro</div>
+    <div class="badge-h" id="plano-nome-header" style="cursor:default"></div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
     <span id="usuario-info" style="display:none;font-size:11px;color:var(--text2)"></span>
+    <button id="btn-planos" class="btn-sm" onclick="mostrarGerentePlanos()" style="display:none">📂 Planos</button>
     <button class="btn-sm" onclick="salvarDados()">💾 Salvar</button>
     <button class="btn-print" onclick="window.print()">🖨️ PDF</button>
     <button id="btn-sair" class="btn-sm" onclick="sairConta()" style="display:none">Sair</button>
@@ -176,6 +177,36 @@
     <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text2)">
       <span id="login-alternar-txt">Ainda não tem conta?</span>
       <a id="login-alternar" onclick="alternarModoLogin()" style="color:var(--accent);cursor:pointer;font-weight:600">Criar conta</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TELA DE PLANOS ═══════════════════ -->
+<div id="planos-screen" style="position:fixed;inset:0;z-index:1999;background:var(--bg);display:none;overflow-y:auto;padding:20px 20px 40px">
+  <div style="max-width:540px;margin:40px auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="logo" style="font-size:28px">planejei</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="planos-email" style="font-size:11px;color:var(--text2)"></span>
+        <button class="btn-sm" onclick="sairConta()" style="font-size:11px">Sair</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:28px">Planejador Financeiro</div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:700;color:var(--text)">Meus Planejamentos</div>
+      <button class="btn-sm" onclick="criarPlano()" style="background:linear-gradient(90deg,#6c63ff,#43e97b);color:#000;border:none;padding:7px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px">+ Novo</button>
+    </div>
+
+    <div id="planos-lista"></div>
+
+    <div id="planos-vazio" style="display:none;text-align:center;padding:48px 20px;color:var(--text2);font-size:13px;border:1px dashed var(--border);border-radius:12px">
+      Nenhum planejamento ainda.<br>
+      <span style="font-size:11px">Clique em <strong>+ Novo</strong> para criar o seu primeiro!</span>
+    </div>
+
+    <div id="planos-loading" style="text-align:center;padding:40px;color:var(--text2);font-size:13px">
+      Carregando…
     </div>
   </div>
 </div>
@@ -1632,11 +1663,13 @@ function marcarParcelasManuais(){
 }
 
 // ══════════════════════════════════════════════════════════
-// LOGIN / SESSÃO
+// LOGIN / SESSÃO / PLANEJAMENTOS
 // ══════════════════════════════════════════════════════════
 let sessaoToken = localStorage.getItem('planejei_token') || '';
 let sessaoEmail = localStorage.getItem('planejei_email') || '';
 let loginModo = 'entrar'; // 'entrar' | 'cadastrar'
+let planejamentoId   = null;  // ID do planejamento aberto
+let planejamentoNome = '';    // Nome do planejamento aberto
 
 const apiJSON = (rota,body) => fetch(rota,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
   .then(async r=>{ const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.erro||'Falha ('+r.status+')'); return j; });
@@ -1672,46 +1705,195 @@ async function fazerLogin(){
     sessaoToken=j.token; sessaoEmail=j.email;
     localStorage.setItem('planejei_token',sessaoToken);
     localStorage.setItem('planejei_email',sessaoEmail);
+    document.getElementById('login-screen').style.display='none';
+    atualizarInfoUsuario();
     if(loginModo==='cadastrar'){
       if(nome) document.getElementById('nome').value=nome;
-      await salvarNuvem(true);            // grava o estado atual na conta nova
+      // Para conta nova: cria o primeiro planejamento e salva o estado atual
+      const plano = await apiJSON('/api/planejamentos/criar',{token:sessaoToken,nome:'Meu Planejamento'});
+      planejamentoId=plano.id; planejamentoNome=plano.nome;
+      await salvarNuvem(true);
+      abrirPlanoLocal();
+      toast('✅ Conta criada!');
     } else {
-      const dados=await apiJSON('/api/carregar',{token:sessaoToken});
-      aplicarSnapshot(dados);
+      toast('👋 Bem-vindo de volta!');
+      await mostrarGerentePlanos();
     }
-    fecharLogin();
-    toast(loginModo==='cadastrar'?'✅ Conta criada!':'👋 Bem-vindo de volta!');
   }catch(e){ loginErro('❌ '+e.message); }
   finally{ btn.disabled=false; btn.textContent=loginModo==='cadastrar'?'Criar conta':'Entrar'; }
 }
 
-function fecharLogin(){
+function atualizarInfoUsuario(){
+  const info=document.getElementById('usuario-info');
+  const sair=document.getElementById('btn-sair');
+  const btnPlanos=document.getElementById('btn-planos');
+  if(sessaoToken){
+    info.textContent=sessaoEmail; info.style.display='inline';
+    sair.style.display='inline-block';
+    btnPlanos.style.display='inline-block';
+  } else {
+    info.style.display='none';
+    sair.style.display='none';
+    btnPlanos.style.display='none';
+  }
+}
+
+// Abre o planejador com o plano já carregado (esconde telas de overlay)
+function abrirPlanoLocal(){
+  document.getElementById('planos-screen').style.display='none';
   document.getElementById('login-screen').style.display='none';
-  const info=document.getElementById('usuario-info'), sair=document.getElementById('btn-sair');
-  if(sessaoToken){ info.textContent=sessaoEmail; info.style.display='inline'; sair.style.display='inline-block'; }
-  else { info.style.display='none'; sair.style.display='none'; }
+  const h=document.getElementById('plano-nome-header');
+  h.textContent=planejamentoNome||'Planejador Financeiro';
+  atualizarInfoUsuario();
 }
 
 async function sairConta(){
   try{ if(sessaoToken) await apiJSON('/api/logout',{token:sessaoToken}); }catch(e){}
+  sessaoToken=''; sessaoEmail='';
+  planejamentoId=null; planejamentoNome='';
   localStorage.removeItem('planejei_token');
   localStorage.removeItem('planejei_email');
   location.reload();
 }
 
-// Auto-login ao abrir: valida o token salvo e carrega os dados da conta
+// ── Gerente de Planejamentos ────────────────────────────
+async function mostrarGerentePlanos(){
+  document.getElementById('planos-screen').style.display='block';
+  document.getElementById('planos-email').textContent=sessaoEmail;
+  document.getElementById('planos-lista').innerHTML='';
+  document.getElementById('planos-vazio').style.display='none';
+  document.getElementById('planos-loading').style.display='block';
+  try{
+    const lista = await apiJSON('/api/planejamentos/listar',{token:sessaoToken});
+    document.getElementById('planos-loading').style.display='none';
+    if(!lista.length){
+      document.getElementById('planos-vazio').style.display='block';
+    } else {
+      document.getElementById('planos-lista').innerHTML=lista.map(p=>{
+        const dt=new Date(p.atualizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
+        return `<div id="plano-card-${p.id}" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div id="plano-nome-${p.id}" style="font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.nome)}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">Modificado em ${dt}</div>
+          </div>
+          <button class="btn-sm" onclick="abrirPlano(${p.id},${JSON.stringify(p.nome)})"
+            style="background:linear-gradient(90deg,#6c63ff,#43e97b);color:#000;border:none;padding:7px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px;white-space:nowrap">Abrir</button>
+          <button class="btn-sm" onclick="renomearPlano(${p.id},${JSON.stringify(p.nome)})"
+            title="Renomear" style="padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px">✏️</button>
+          <button class="btn-sm" onclick="excluirPlano(${p.id},${JSON.stringify(p.nome)})"
+            title="Excluir" style="padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--red)">🗑️</button>
+        </div>`;
+      }).join('');
+    }
+  }catch(e){
+    document.getElementById('planos-loading').style.display='none';
+    document.getElementById('planos-lista').innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px">Erro ao carregar: ${esc(e.message)}</div>`;
+  }
+}
+
+async function abrirPlano(id, nome){
+  try{
+    const dados = await apiJSON('/api/carregar',{token:sessaoToken,planejamento_id:id});
+    aplicarSnapshot(dados);
+    planejamentoId=id; planejamentoNome=nome;
+    localStorage.setItem('planejei_plano_id', id);
+    localStorage.setItem('planejei_plano_nome', nome);
+    abrirPlanoLocal();
+  }catch(e){ alert('Erro ao abrir planejamento: '+e.message); }
+}
+
+async function criarPlano(){
+  const nome=(prompt('Nome do novo planejamento:','Novo Planejamento')||'').trim();
+  if(!nome) return;
+  try{
+    const plano = await apiJSON('/api/planejamentos/criar',{token:sessaoToken,nome});
+    // Abre diretamente o novo plano vazio
+    planejamentoId=plano.id; planejamentoNome=plano.nome;
+    localStorage.setItem('planejei_plano_id', plano.id);
+    localStorage.setItem('planejei_plano_nome', plano.nome);
+    // Limpa o formulário para o novo plano
+    limparFormulario();
+    abrirPlanoLocal();
+    toast('✅ Planejamento criado!');
+  }catch(e){ alert('Erro: '+e.message); }
+}
+
+async function renomearPlano(id, nomeAtual){
+  const novo=(prompt('Novo nome:',nomeAtual)||'').trim();
+  if(!novo||novo===nomeAtual) return;
+  try{
+    await apiJSON('/api/planejamentos/renomear',{token:sessaoToken,id,nome:novo});
+    // Atualiza na lista
+    const el=document.getElementById(`plano-nome-${id}`);
+    if(el) el.textContent=novo;
+    // Atualiza se for o plano atual
+    if(planejamentoId===id){
+      planejamentoNome=novo;
+      localStorage.setItem('planejei_plano_nome',novo);
+      document.getElementById('plano-nome-header').textContent=novo;
+    }
+    toast('✅ Renomeado!');
+  }catch(e){ alert('Erro: '+e.message); }
+}
+
+async function excluirPlano(id, nome){
+  if(!confirm(`Excluir "${nome}"?\n\nTodos os dados deste planejamento serão apagados permanentemente.`)) return;
+  try{
+    await apiJSON('/api/planejamentos/excluir',{token:sessaoToken,id});
+    const card=document.getElementById(`plano-card-${id}`);
+    if(card) card.remove();
+    const lista=document.getElementById('planos-lista');
+    if(!lista.children.length) document.getElementById('planos-vazio').style.display='block';
+    // Se era o plano atual, limpa o estado
+    if(planejamentoId===id){
+      planejamentoId=null; planejamentoNome='';
+      localStorage.removeItem('planejei_plano_id');
+      localStorage.removeItem('planejei_plano_nome');
+    }
+    toast('🗑️ Planejamento excluído.');
+  }catch(e){ alert('Erro: '+e.message); }
+}
+
+// Limpa todo o formulário para um novo planejamento em branco
+function limparFormulario(){
+  document.querySelectorAll('input[id],select[id]').forEach(el=>{
+    const skip=['login-email','login-senha','login-nome'];
+    if(skip.includes(el.id)) return;
+    if(el.type==='checkbox') el.checked=false;
+    else if(el.tagName==='SELECT') el.selectedIndex=0;
+    else el.value='';
+  });
+  // Limpa tabelas dinâmicas
+  Object.values(NUVEM_TBODY).forEach(id=>{ const tb=document.getElementById(id); if(tb) tb.innerHTML=''; });
+  recalcFin(); recalcImovel(); recalcDiv(); recalcAll();
+}
+
+// Auto-login ao abrir: valida o token salvo e vai para os planos
 async function initLogin(){
-  if(location.protocol==='file:'){      // sem servidor não há como autenticar
+  if(location.protocol==='file:'){
     loginErro('⚠️ Abra o app pelo endereço do servidor (Railway ou http://localhost:3000) para entrar.');
     return;
   }
-  if(!sessaoToken) return;              // mostra a tela de login
+  if(!sessaoToken) return;
   try{
     await apiJSON('/api/sessao',{token:sessaoToken});
-    const dados=await apiJSON('/api/carregar',{token:sessaoToken});
-    aplicarSnapshot(dados);
-    fecharLogin();
-  }catch(e){                            // token expirado → login de novo
+    atualizarInfoUsuario();
+    // Tenta reabrir o último plano usado automaticamente
+    const lastId  = parseInt(localStorage.getItem('planejei_plano_id')||'0');
+    const lastNome= localStorage.getItem('planejei_plano_nome')||'';
+    if(lastId){
+      try{
+        const dados=await apiJSON('/api/carregar',{token:sessaoToken,planejamento_id:lastId});
+        aplicarSnapshot(dados);
+        planejamentoId=lastId; planejamentoNome=lastNome;
+        abrirPlanoLocal();
+        return;
+      }catch(_){ /* plano pode ter sido excluído, cai no gerente */ }
+    }
+    // Nenhum plano recente → mostra gerente
+    document.getElementById('login-screen').style.display='none';
+    await mostrarGerentePlanos();
+  }catch(e){
     sessaoToken=''; sessaoEmail='';
     localStorage.removeItem('planejei_token');
     localStorage.removeItem('planejei_email');
@@ -1719,10 +1901,10 @@ async function initLogin(){
 }
 
 async function salvarNuvem(silencioso){
-  if(!sessaoToken) return;
+  if(!sessaoToken||!planejamentoId) return;
   try{
     const snap=snapshotCompleto();
-    await apiJSON('/api/salvar',{token:sessaoToken,nome:document.getElementById('nome')?.value||'',...snap});
+    await apiJSON('/api/salvar',{token:sessaoToken,planejamento_id:planejamentoId,nome:document.getElementById('nome')?.value||'',...snap});
     if(!silencioso) toast('☁️ Salvo na nuvem!');
   }catch(e){
     toast('⚠️ Nuvem: '+e.message);
