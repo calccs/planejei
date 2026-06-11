@@ -1776,11 +1776,11 @@ async function mostrarGerentePlanos(){
             <div id="plano-nome-${p.id}" style="font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.nome)}</div>
             <div style="font-size:11px;color:var(--text2);margin-top:2px">Modificado em ${dt}</div>
           </div>
-          <button class="btn-sm" onclick="abrirPlano(${p.id},${JSON.stringify(p.nome)})"
+          <button class="btn-sm" onclick="abrirPlano(${p.id},${esc(JSON.stringify(p.nome))})"
             style="background:linear-gradient(90deg,#6c63ff,#43e97b);color:#000;border:none;padding:7px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px;white-space:nowrap">Abrir</button>
-          <button class="btn-sm" onclick="renomearPlano(${p.id},${JSON.stringify(p.nome)})"
+          <button class="btn-sm" onclick="renomearPlano(${p.id},${esc(JSON.stringify(p.nome))})"
             title="Renomear" style="padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px">✏️</button>
-          <button class="btn-sm" onclick="excluirPlano(${p.id},${JSON.stringify(p.nome)})"
+          <button class="btn-sm" onclick="excluirPlano(${p.id},${esc(JSON.stringify(p.nome))})"
             title="Excluir" style="padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--red)">🗑️</button>
         </div>`;
       }).join('');
