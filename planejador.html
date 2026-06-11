@@ -402,6 +402,10 @@
       <div class="section-title">Análise de Gap — Renda vs Necessidade</div>
       <div class="kpi-row" id="kpi-apo"></div>
       <div id="gap-analysis"></div>
+      <div style="background:var(--surface2);border-left:3px solid var(--gold);border-radius:8px;padding:12px 14px;margin-top:14px;font-size:11px;color:var(--text2);line-height:1.7">
+        <strong style="color:var(--gold)">💡 O que é a Regra dos 4%?</strong><br>
+        Estudo clássico de planejamento (Bengen, 1994 / Trinity Study): retirando <strong style="color:var(--text)">4% do patrimônio no primeiro ano</strong> de aposentadoria e repetindo o valor <strong style="color:var(--text)">corrigido pela inflação</strong> nos anos seguintes, o dinheiro tem alta probabilidade histórica de durar 30 anos ou mais. Na prática, ela responde quanto acumular: <strong style="color:var(--text)">patrimônio necessário ≈ despesa anual × 25</strong> (ex.: R$10.000/mês → R$3 milhões). Perfis conservadores ou aposentadorias longas usam 3–3,5%; o percentual é ajustável no campo "Regra de retirada segura" acima.
+      </div>
     </div>
 
     <div class="section">
@@ -946,7 +950,7 @@ function recalcApo() {
   document.getElementById('kpi-apo').innerHTML=[
     {val:brl0(pvApoLiq),label:'Patrimônio na aposentadoria',sub:`Aos ${idadeApo} anos ≈ ${brl0(pvApoReal)} em R$ de hoje`,cls:''},
     {val:brl0(rentaGerada),label:'Renda sustentável/mês',sub:`Anuidade por ${nVida} anos, em R$ de hoje`,cls:rentaGerada>=rendaGap?'green':'red'},
-    {val:brl0(rendaRegra),label:`Regra dos ${(rr*100).toLocaleString('pt-BR',{maximumFractionDigits:0})}% /mês`,sub:'Safe withdrawal rate, em R$ de hoje',cls:rendaRegra>=rendaGap?'green':'red'},
+    {val:brl0(rendaRegra),label:`Regra dos ${(rr*100).toLocaleString('pt-BR',{maximumFractionDigits:0})}% /mês`,sub:'Taxa segura de retirada, em R$ de hoje',cls:rendaRegra>=rendaGap?'green':'red'},
     {val:brl0(rendaDes),label:'Renda desejada/mês',sub:`Externa: ${brl0(rendaExt)}/mês`,cls:''},
     {val:brl0(metaRenda),label:'Patrimônio mínimo p/ meta',sub:`Para ${brl0(rendaGap)}/mês puro, em R$ de hoje`,cls:pvApoReal>=metaRenda?'green':'red'},
   ].map(k=>`<div class="kpi"><div class="kpi-val ${k.cls}">${k.val}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div></div>`).join('');
