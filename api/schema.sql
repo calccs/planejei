@@ -120,6 +120,16 @@ CREATE TABLE IF NOT EXISTS educacao (
   observacoes     TEXT
 );
 
+-- Família extensa (pais, irmãos, outros parentes relevantes)
+CREATE TABLE IF NOT EXISTS familia_extensa (
+  id              SERIAL PRIMARY KEY,
+  planejamento_id INT NOT NULL REFERENCES planejamentos(id) ON DELETE CASCADE,
+  nome            TEXT,
+  parentesco      TEXT,
+  idade           NUMERIC,
+  observacoes     TEXT
+);
+
 -- ════════════════════════════════════════════════════════════
 -- MIGRAÇÕES INCREMENTAIS (idempotentes)
 -- ════════════════════════════════════════════════════════════

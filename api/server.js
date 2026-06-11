@@ -36,6 +36,7 @@ const TABELAS = {
   recfut: { tabela: 'receitas_futuras',   cols: ['descricao','valor','observacoes'],                         num: [1] },
   div:    { tabela: 'dividas',            cols: ['descricao','saldo','prazo_anos','taxa_anual','parcela_mensal','abater_patrimonio'], num: [1,2,3,4] },
   edu:    { tabela: 'educacao',           cols: ['custo_total','observacoes'],                               num: [0] },
+  fam:    { tabela: 'familia_extensa',   cols: ['nome','parentesco','idade','observacoes'],                  num: [2] },
 };
 
 // "46.320,46" → 46320.46 | "100" → 100 | inválido → null

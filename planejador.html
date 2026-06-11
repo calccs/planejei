@@ -248,13 +248,35 @@
             <option>Moderado-Agressivo (25%)</option><option>Agressivo (40%)</option>
           </select>
         </div>
+        <div class="field"><label>Dupla Cidadania</label>
+          <select id="dupla_cidadania">
+            <option selected>Não</option><option>Italiana</option><option>Portuguesa</option>
+            <option>Americana</option><option>Espanhola</option><option>Alemã</option><option>Outra</option>
+          </select>
+        </div>
+        <div class="field"><label>Saída Fiscal</label>
+          <select id="saida_fiscal">
+            <option selected>Não</option><option>Sim — Em andamento</option><option>Sim — Concluída</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column:span 3"><label>Observações / Situações Especiais</label>
+          <input id="obs_perfil" placeholder="Ex.: inventário em andamento, holding familiar, acordo pré-nupcial…" style="width:100%">
+        </div>
       </div>
-      <div style="margin-top:14px;font-size:12px;font-weight:700;margin-bottom:10px;">Dependentes</div>
+
+      <div style="margin-top:18px;font-size:12px;font-weight:700;margin-bottom:10px;">Dependentes</div>
       <table class="tbl">
         <thead><tr><th>Nome</th><th>Idade</th><th>Observações</th><th></th></tr></thead>
         <tbody id="dep-tbody"></tbody>
       </table>
       <button class="btn-add" onclick="addDep()">+ Dependente</button>
+
+      <div style="margin-top:18px;font-size:12px;font-weight:700;margin-bottom:10px;">Família Extensa</div>
+      <table class="tbl">
+        <thead><tr><th>Nome</th><th>Parentesco</th><th>Idade</th><th>Observações</th><th></th></tr></thead>
+        <tbody id="fam-tbody"></tbody>
+      </table>
+      <button class="btn-add" onclick="addFamilia()">+ Familiar</button>
     </div>
 
     <div class="section">
@@ -512,11 +534,13 @@
             <thead><tr><th>Categoria</th><th>Valor (R$)</th><th></th></tr></thead>
             <tbody id="rec-tbody">
               <tr><td><input value="Salário Líquido"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Pro-labore / Remuneração PJ"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
               <tr><td><input value="13º Salário"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
               <tr><td><input value="Férias"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
               <tr><td><input value="Bônus / PLR"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
-              <tr><td><input value="Renda Extra / Aluguel"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
-              <tr><td><input value="Dividendos / Juros"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Comissões / Vendas"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Rendimentos (dividendos, juros, FII)"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
+              <tr><td><input value="Aluguéis"></td><td><input type="text" inputmode="decimal" value="0" class="rec-val" oninput="recalcOrc()"></td><td><button class="btn-del" onclick="delRow(this);recalcOrc()">✕</button></td></tr>
             </tbody>
             <tfoot><tr style="font-weight:700;background:var(--surface2)"><td>Receita Total</td><td id="orc-rec-total" style="color:var(--green)">—</td><td></td></tr></tfoot>
           </table>
@@ -1179,6 +1203,7 @@ function chartOpts(){
 // ADD ROWS
 // ══════════════════════════════════════════════════════════
 function addDep(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" style="width:60px"></td><td><input value=""></td><td><button class="btn-del" onclick="delRow(this)">✕</button></td>`;document.getElementById('dep-tbody').appendChild(tr);}
+function addFamilia(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>Pai</option><option>Mãe</option><option>Irmão</option><option>Irmã</option><option>Cônjuge</option><option>Avô</option><option>Avó</option><option>Outro</option></select></td><td><input type="text" inputmode="decimal" value="0" style="width:60px"></td><td><input value=""></td><td><button class="btn-del" onclick="delRow(this)">✕</button></td>`;document.getElementById('fam-tbody').appendChild(tr);}
 function addFin(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value="" oninput="recalcFin()"></td><td><input type="text" inputmode="decimal" value="0" oninput="recalcFin()" style="width:100px"></td><td class="fin-pct-cell" style="color:var(--text2)">—</td><td><input type="text" inputmode="decimal" step="0.01" value="1" oninput="recalcFin()" style="width:60px"></td><td><input type="text" inputmode="decimal" step="0.01" value="0" oninput="recalcFin()" style="width:80px"></td><td><input value=""></td><td><button class="btn-del" onclick="delRow(this);recalcFin()">✕</button></td>`;document.getElementById('fin-tbody').appendChild(tr);recalcFin();}
 function addImovel(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value=""></td><td><input type="text" inputmode="decimal" value="0" oninput="recalcImovel()" style="width:100px"></td><td><select style="background:transparent;border:none;color:var(--text);font-size:11px;outline:none;font-family:inherit;"><option>Não</option><option>Sim</option></select></td><td><input type="text" inputmode="decimal" value="0" style="width:80px"></td><td><button class="btn-del" onclick="delRow(this);recalcImovel()">✕</button></td>`;document.getElementById('imovel-tbody').appendChild(tr);recalcImovel();}
 function addMeta(){const tr=document.createElement('tr');tr.innerHTML=`<td><input value="Nova Meta"></td><td><input type="text" inputmode="decimal" value="100000" style="width:110px" oninput="recalcMetas()"></td><td><input type="text" inputmode="decimal" value="0" style="width:110px" oninput="recalcMetas()"></td><td><input type="text" inputmode="decimal" value="12" style="width:70px" oninput="recalcMetas()"></td><td class="meta-pmt" style="color:var(--accent);font-weight:700">—</td><td class="meta-prog"><div class="prog-bar"><div class="prog-fill" style="width:0%"></div></div></td><td><button class="btn-del" onclick="delRow(this);recalcMetas()">✕</button></td>`;document.getElementById('metas-tbody').appendChild(tr);recalcMetas();}
@@ -1630,8 +1655,8 @@ function carregarDados() {
 // ══════════════════════════════════════════════════════════
 // NUVEM (API Express + PostgreSQL no Railway)
 // ══════════════════════════════════════════════════════════
-const NUVEM_TBODY = {dep:'dep-tbody',fin:'fin-tbody',imovel:'imovel-tbody',metas:'metas-tbody',rec:'rec-tbody',desp:'desp-tbody',proj:'proj-tbody',recfut:'receitas-fut-tbody',div:'div-tbody',edu:'edu-tbody'};
-const NUVEM_ADDFN = {dep:'addDep',fin:'addFin',imovel:'addImovel',metas:'addMeta',rec:'addReceita',desp:'addDespesa',proj:'addProjeto',recfut:'addReceitaFut',div:'addDiv'}; // edu: linhas fixas
+const NUVEM_TBODY = {dep:'dep-tbody',fin:'fin-tbody',imovel:'imovel-tbody',metas:'metas-tbody',rec:'rec-tbody',desp:'desp-tbody',proj:'proj-tbody',recfut:'receitas-fut-tbody',div:'div-tbody',edu:'edu-tbody',fam:'fam-tbody'};
+const NUVEM_ADDFN = {dep:'addDep',fin:'addFin',imovel:'addImovel',metas:'addMeta',rec:'addReceita',desp:'addDespesa',proj:'addProjeto',recfut:'addReceitaFut',div:'addDiv',fam:'addFamilia'}; // edu: linhas fixas
 
 function snapshotCompleto(){
   const campos={}, SKIP=['login-email','login-senha','login-nome'];
