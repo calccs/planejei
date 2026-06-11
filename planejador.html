@@ -326,17 +326,17 @@
       </div>
       <div class="collapsible-body open" id="taxa-brackets">
         <div style="padding:14px 0">
-          <div style="font-size:11px;color:var(--text2);margin-bottom:8px">Rentabilidade nominal anual por fase — inspirada nas melhores práticas internacionais. Clique para editar.</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px">Rentabilidade nominal anual por fase — sugestão padrão decrescente: mais risco na acumulação, mais conservadorismo com a idade. Clique para ajustar ao seu perfil.</div>
           <div class="rate-bracket">
-            <div class="rate-cell"><label>Acumulação<br>(até aposentadoria)</label><input id="r1" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
-            <div class="rate-cell"><label>Aposentadoria<br>Inicial (5 anos)</label><input id="r2" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
-            <div class="rate-cell"><label>Fase Madura<br>(10 anos)</label><input id="r3" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
-            <div class="rate-cell"><label>Fase Avançada<br>(10 anos)</label><input id="r4" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
-            <div class="rate-cell"><label>Longevidade<br>(após 85)</label><input id="r5" type="text" inputmode="decimal" step="0.1" value="0" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
+            <div class="rate-cell"><label>Acumulação<br>(até aposentadoria)</label><input id="r1" type="text" inputmode="decimal" step="0.1" value="12,00" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
+            <div class="rate-cell"><label>Aposentadoria<br>Inicial (5 anos)</label><input id="r2" type="text" inputmode="decimal" step="0.1" value="10,50" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
+            <div class="rate-cell"><label>Fase Madura<br>(10 anos)</label><input id="r3" type="text" inputmode="decimal" step="0.1" value="9,50" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
+            <div class="rate-cell"><label>Fase Avançada<br>(10 anos)</label><input id="r4" type="text" inputmode="decimal" step="0.1" value="8,50" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
+            <div class="rate-cell"><label>Longevidade<br>(após 85)</label><input id="r5" type="text" inputmode="decimal" step="0.1" value="7,50" oninput="recalcProjecao()"><div style="font-size:9px;color:var(--text2);margin-top:4px">% a.a.</div></div>
           </div>
           <div class="toggle-row" style="margin-top:10px">
             <label class="switch"><input type="checkbox" id="usar-taxa-variavel" onchange="recalcProjecao()"><span class="slider"></span></label>
-            <span class="toggle-label">Usar taxa variável por fase (desativado = CDI fixo)</span>
+            <span class="toggle-label">Usar taxa variável por fase (desativado = rentabilidade da carteira atual)</span>
           </div>
         </div>
       </div>
@@ -865,7 +865,7 @@ function recalcProjecao() {
 
   const rr=g('regra_retirada')/100||0.04;
   const metaRegra=g('renda_apo')*12/rr;
-  const atApo=[s1,s2,s3].map(s=>{ const f=s.find(p=>p.age===idadeApo); return f?f.val:s[s.length-1].val; });
+  const atApo=[s1,s2,s3].map(s=>{ const f=s.find(p=>p.age===idadeApo); return f?f.val:(s[s.length-1]?.val||0); });
 
   document.getElementById('pmt-result').innerHTML=`<div class="kpi" style="margin:0"><div class="kpi-val gold">${brl0(pmtNec)}/mês</div><div class="kpi-label">Poupança necessária para a meta</div><div class="kpi-sub">Em ${nPr} anos com rentabilidade de ${(taxaProj*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}% a.a. (carteira atual)</div></div>`;
 
