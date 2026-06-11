@@ -207,6 +207,9 @@
         <div class="field"><label>Estado civil</label>
           <select id="civil"><option>Solteiro</option><option selected>Casado</option><option>Divorciado</option><option>União Estável</option><option>Viúvo(a)</option></select>
         </div>
+        <div class="field"><label>Regime de casamento</label>
+          <select id="regime_casamento"><option selected>Comunhão Parcial</option><option>Comunhão Universal</option><option>Separação de Bens</option><option>Regime Misto</option></select>
+        </div>
         <div class="field"><label>Profissão</label><input id="profissao" value=""></div>
         <div class="field"><label>Suitability</label>
           <select id="suitability" onchange="recalcAll()">
@@ -1699,6 +1702,7 @@ const TIPS = {
   idade:'Idade atual em anos — base de todas as projeções',
   vida:'Expectativa de vida usada nas projeções de longo prazo',
   civil:'Estado civil — relevante para planejamento sucessório',
+  regime_casamento:'Regime de bens do casamento — define a partilha no planejamento sucessório',
   profissao:'Sua profissão ou área de atuação',
   suitability:'Perfil de risco — define tolerância a renda variável',
   inflacao:'Inflação anual estimada (IPCA). Reduz o poder de compra futuro',
