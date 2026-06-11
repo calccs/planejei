@@ -937,20 +937,24 @@ function recalcApo() {
   }
   const ir=document.getElementById('ir')?.value?.includes('15')?0.85:1.0;
   const pvApoLiq=pvApo*ir;
+  // A renda desejada está em R$ de HOJE; o capital projetado é nominal (inflado).
+  // Deflaciona o capital para poder de compra de hoje antes de comparar.
+  const fatorInfl = Math.pow(1+infl, Math.max(0,nAcum));
+  const pvApoReal = pvApoLiq / fatorInfl;
   const rr=g('regra_retirada')/100||0.04;
-  // Anuidade finita mensal: converte taxa anual → mensal e n em meses para precisão
+  // Anuidade finita mensal a juro real sobre o capital em R$ de hoje
   const im = Math.pow(1+rentReal,1/12)-1;
   const nm = nVida*12;
-  const rentaGerada = nm>0&&im>0 ? pvApoLiq*im/(1-Math.pow(1+im,-nm)) : pvApoLiq*rentApo/12;
-  const rendaRegra=pvApoLiq*rr/12;
+  const rentaGerada = nm>0 ? (im>0 ? pvApoReal*im/(1-Math.pow(1+im,-nm)) : pvApoReal/nm) : 0;
+  const rendaRegra=pvApoReal*rr/12;
   const metaRenda=rendaGap*12/rr;
 
   document.getElementById('kpi-apo').innerHTML=[
-    {val:brl0(pvApoLiq),label:'Patrimônio na aposentadoria',sub:`Aos ${idadeApo} anos`,cls:''},
-    {val:brl0(rentaGerada),label:'Renda sustentável/mês',sub:`Anuidade por ${nVida} anos (juro real)`,cls:rentaGerada>=rendaGap?'green':'red'},
-    {val:brl0(rendaRegra),label:`Regra dos ${(rr*100).toLocaleString('pt-BR',{maximumFractionDigits:0})}% /mês`,sub:'Safe withdrawal rate',cls:rendaRegra>=rendaGap?'green':'red'},
+    {val:brl0(pvApoLiq),label:'Patrimônio na aposentadoria',sub:`Aos ${idadeApo} anos ≈ ${brl0(pvApoReal)} em R$ de hoje`,cls:''},
+    {val:brl0(rentaGerada),label:'Renda sustentável/mês',sub:`Anuidade por ${nVida} anos, em R$ de hoje`,cls:rentaGerada>=rendaGap?'green':'red'},
+    {val:brl0(rendaRegra),label:`Regra dos ${(rr*100).toLocaleString('pt-BR',{maximumFractionDigits:0})}% /mês`,sub:'Safe withdrawal rate, em R$ de hoje',cls:rendaRegra>=rendaGap?'green':'red'},
     {val:brl0(rendaDes),label:'Renda desejada/mês',sub:`Externa: ${brl0(rendaExt)}/mês`,cls:''},
-    {val:brl0(metaRenda),label:'Patrimônio mínimo p/ meta',sub:`Para ${brl0(rendaGap)}/mês puro`,cls:pvApoLiq>=metaRenda?'green':'red'},
+    {val:brl0(metaRenda),label:'Patrimônio mínimo p/ meta',sub:`Para ${brl0(rendaGap)}/mês puro, em R$ de hoje`,cls:pvApoReal>=metaRenda?'green':'red'},
   ].map(k=>`<div class="kpi"><div class="kpi-val ${k.cls}">${k.val}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div></div>`).join('');
 
   const gap=rendaGap-rentaGerada;
@@ -970,7 +974,8 @@ function recalcApo() {
     let preP=pv;
     for(let k=0;k<Math.min(n,nAcum);k++){ const tx=getTaxaParaIdade(idadeAt+k,idadeApo); preP=preP*(1+tx)+pmt*Math.pow(1+reajuste,k); }
     ptsPre.push({age,val:preP});
-    if(age>=idadeApo){ capR=capR*(1+rentApo); capC=Math.max(0,capC*(1+rentApo)-rendaGap*12); }
+    // Retirada nominal: renda em R$ de hoje corrigida pela inflação até a idade corrente
+    if(age>=idadeApo){ capR=capR*(1+rentApo); capC=Math.max(0,capC*(1+rentApo)-rendaGap*12*Math.pow(1+infl,n)); }
     ptsR.push({age,val:age<idadeApo?null:capR});
     ptsC.push({age,val:age<idadeApo?null:capC});
   }
